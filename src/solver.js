@@ -180,6 +180,8 @@ export function countSolutions(rowHints, colHints) {
       return
     }
 
+    const originalRow = grid[r]
+
     for (const poss of rowPossibilities[r]) {
       grid[r] = poss
 
@@ -195,6 +197,8 @@ export function countSolutions(rowHints, colHints) {
         backtrack(r + 1, grid)
       }
     }
+
+    grid[r] = originalRow
   }
 
   const grid = Array.from({ length: rows }, () => Array(cols).fill(0))
