@@ -1,11 +1,9 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { generatePuzzleAsync } from './generator.js'
 
-const SIZE = 10
-
-const grid = ref(Array.from({ length: SIZE }, () => Array(SIZE).fill(0)))
-// 0 = empty, 1 = filled, 2 = X
+const currentSize = ref(10)
+const grid = ref([])
 const mode = ref('fill') // 'fill' or 'x'
 const history = ref([])
 const seconds = ref(0)
@@ -22,12 +20,37 @@ const currentRowHints = ref(null)
 const currentColHints = ref(null)
 const isGenerating = ref(false)
 
+const puzzleBank = ref([])
+const currentPuzzleId = ref(null)
+const puzzleBankLoaded = ref(false)
+
+async function loadPuzzleBank() {
+  try {
+    const res = await fetch('/puzzles.json')
+    puzzleBank.value = await res.json()
+    puzzleBankLoaded.value = true
+  } catch (e) {
+    console.error('Failed to load puzzle bank:', e)
+  }
+}
+
+const puzzlesForSize = computed(() => {
+  return puzzleBank.value.filter(p => p.size === currentSize.value)
+})
+
+function createEmptyGrid(size) {
+  return Array.from({ length: size }, () => Array(size).fill(0))
+}
+
 function loadPuzzle(puzzle) {
   currentSolution.value = puzzle.solution
   currentRowHints.value = puzzle.rowHints
   currentColHints.value = puzzle.colHints
+  currentPuzzleId.value = puzzle.id || null
   restart()
 }
+
+
 
 function onKeyDown(e) {
   if (e.key === 'Control' || e.key === 'Meta') {
@@ -72,8 +95,6 @@ function toggleMode(newMode) {
 }
 
 function getTargetValue(button) {
-  // button: 0 = left, 2 = right
-  // left uses current mode, right uses reversed mode
   const effectiveMode = button === 0 ? mode.value : (mode.value === 'fill' ? 'x' : 'fill')
   return effectiveMode === 'fill' ? 1 : 2
 }
@@ -88,7 +109,6 @@ function cellMouseDown(e, r, c) {
   const targetVal = getTargetValue(e.button)
   const currentVal = grid.value[r][c]
 
-  // Toggle: if already target, clear; otherwise set target
   dragValue.value = currentVal === targetVal ? 0 : targetVal
   grid.value[r][c] = dragValue.value
   isDragging.value = true
@@ -117,7 +137,7 @@ function undo() {
 function restart() {
   stopTimer()
   seconds.value = 0
-  grid.value = Array.from({ length: SIZE }, () => Array(SIZE).fill(0))
+  grid.value = createEmptyGrid(currentSize.value)
   history.value = []
   isComplete.value = false
   isDragging.value = false
@@ -127,15 +147,20 @@ function restart() {
 async function generateNewPuzzle() {
   if (isGenerating.value) return
   isGenerating.value = true
-  const puzzle = await generatePuzzleAsync()
+  currentPuzzleId.value = null
+  const puzzle = await generatePuzzleAsync(currentSize.value)
   loadPuzzle(puzzle)
   isGenerating.value = false
 }
 
+function selectBankPuzzle(puzzle) {
+  loadPuzzle(puzzle)
+}
+
 function checkComplete() {
   if (!currentSolution.value) return
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
+  for (let r = 0; r < currentSize.value; r++) {
+    for (let c = 0; c < currentSize.value; c++) {
       const expected = currentSolution.value[r][c]
       const actual = grid.value[r][c]
       if (expected === 1 && actual !== 1) return
@@ -152,10 +177,42 @@ const formattedTime = computed(() => {
   return `${m}:${s}`
 })
 
+const cellSize = computed(() => {
+  if (currentSize.value <= 5) return '40px'
+  if (currentSize.value <= 10) return '32px'
+  return '24px'
+})
+
+const hintAreaSize = computed(() => {
+  if (currentSize.value <= 5) return '60px'
+  if (currentSize.value <= 10) return '80px'
+  return '100px'
+})
+
+function changeSize(size) {
+  currentSize.value = size
+  restart()
+  if (puzzlesForSize.value.length > 0) {
+    selectBankPuzzle(puzzlesForSize.value[0])
+  } else {
+    generateNewPuzzle()
+  }
+}
+
+watch(currentSize, () => {
+  restart()
+})
+
 onMounted(() => {
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
-  generateNewPuzzle()
+  loadPuzzleBank().then(() => {
+    if (puzzlesForSize.value.length > 0) {
+      selectBankPuzzle(puzzlesForSize.value[0])
+    } else {
+      generateNewPuzzle()
+    }
+  })
 })
 
 onUnmounted(() => {
@@ -197,6 +254,33 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <div class="size-selector">
+      <span class="label">Size:</span>
+      <div class="btn-group">
+        <button
+          class="mode-btn"
+          :class="{ active: currentSize === 5 }"
+          @click="changeSize(5)"
+        >
+          5×5
+        </button>
+        <button
+          class="mode-btn"
+          :class="{ active: currentSize === 10 }"
+          @click="changeSize(10)"
+        >
+          10×10
+        </button>
+        <button
+          class="mode-btn"
+          :class="{ active: currentSize === 15 }"
+          @click="changeSize(15)"
+        >
+          15×15
+        </button>
+      </div>
+    </div>
+
     <div class="board-wrapper" :class="{ complete: isComplete }">
       <!-- Top-left spacer -->
       <div class="spacer"></div>
@@ -227,6 +311,7 @@ onUnmounted(() => {
             :key="c"
             class="cell"
             :class="{ filled: cell === 1, x: cell === 2 }"
+            :style="{ width: cellSize, height: cellSize }"
             @mousedown.prevent="cellMouseDown($event, r, c)"
             @mouseenter="cellMouseEnter(r, c)"
             @contextmenu.prevent
@@ -237,9 +322,24 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <button class="action-btn new-btn" @click="generateNewPuzzle" :disabled="isGenerating">
-      {{ isGenerating ? 'Generating...' : 'New' }}
-    </button>
+    <div class="controls">
+      <div v-if="puzzleBankLoaded" class="puzzle-picker">
+        <span class="label">Puzzle:</span>
+        <select
+          class="puzzle-select"
+          :value="currentPuzzleId || ''"
+          @change="e => selectBankPuzzle(puzzlesForSize.find(p => p.id === e.target.value))"
+        >
+          <option v-for="p in puzzlesForSize" :key="p.id" :value="p.id">
+            {{ p.id }}
+          </option>
+        </select>
+      </div>
+
+      <button class="action-btn new-btn" @click="generateNewPuzzle" :disabled="isGenerating">
+        {{ isGenerating ? 'Generating...' : 'New Random' }}
+      </button>
+    </div>
 
     <div v-if="isComplete" class="message">
       Completed in {{ formattedTime }}!
@@ -269,7 +369,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
 }
 
 .title {
@@ -331,6 +431,17 @@ body {
   cursor: not-allowed;
 }
 
+.size-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
 .board-wrapper {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -340,8 +451,8 @@ body {
 }
 
 .spacer {
-  width: 80px;
-  height: 80px;
+  width: v-bind('hintAreaSize');
+  height: v-bind('hintAreaSize');
   border-right: 2px solid #000;
   border-bottom: 2px solid #000;
 }
@@ -352,8 +463,8 @@ body {
 }
 
 .col-hint {
-  width: 32px;
-  height: 80px;
+  width: v-bind('cellSize');
+  height: v-bind('hintAreaSize');
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -374,8 +485,8 @@ body {
 }
 
 .row-hint {
-  width: 80px;
-  height: 32px;
+  width: v-bind('hintAreaSize');
+  height: v-bind('cellSize');
   display: flex;
   justify-content: flex-end;
   align-items: center;
@@ -404,8 +515,6 @@ body {
 }
 
 .cell {
-  width: 32px;
-  height: 32px;
   border-right: 1px solid #ccc;
   border-bottom: 1px solid #ccc;
   display: flex;
@@ -445,6 +554,35 @@ body {
   cursor: default;
 }
 
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.puzzle-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.puzzle-select {
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 2px solid #000;
+  background: #fff;
+  cursor: pointer;
+}
+
+.new-btn {
+  padding: 10px 24px;
+  font-size: 1rem;
+  border: 2px solid #000;
+}
+
 .message {
   font-size: 1.25rem;
   font-weight: 700;
@@ -456,36 +594,29 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.new-btn {
-  margin-top: 8px;
-  padding: 10px 32px;
-  font-size: 1rem;
-  border: 2px solid #000;
-}
-
 @media (max-width: 480px) {
   .title {
     font-size: 1.5rem;
   }
 
   .cell {
-    width: 28px;
-    height: 28px;
+    width: 28px !important;
+    height: 28px !important;
   }
 
   .col-hint {
-    width: 28px;
-    height: 60px;
+    width: 28px !important;
+    height: 60px !important;
   }
 
   .row-hint {
-    width: 60px;
-    height: 28px;
+    width: 60px !important;
+    height: 28px !important;
   }
 
   .spacer {
-    width: 60px;
-    height: 60px;
+    width: 60px !important;
+    height: 60px !important;
   }
 }
 </style>

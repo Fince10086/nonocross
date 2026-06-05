@@ -7,7 +7,7 @@ function getWorker() {
   return worker
 }
 
-export function generatePuzzleAsync() {
+export function generatePuzzleAsync(size = 10) {
   return new Promise((resolve) => {
     const w = getWorker()
     w.onmessage = (e) => {
@@ -15,6 +15,6 @@ export function generatePuzzleAsync() {
         resolve(e.data.puzzle)
       }
     }
-    w.postMessage({ type: 'generate' })
+    w.postMessage({ type: 'generate', size })
   })
 }
