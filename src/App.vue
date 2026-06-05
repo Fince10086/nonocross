@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { solution, rowHints, colHints } from './puzzle.js'
+import { generatePuzzleAsync } from './generator.js'
 
 const SIZE = 10
 
@@ -16,6 +16,18 @@ const isRunning = ref(false)
 const isDragging = ref(false)
 const dragValue = ref(null)
 const ctrlDown = ref(false)
+
+const currentSolution = ref(null)
+const currentRowHints = ref(null)
+const currentColHints = ref(null)
+const isGenerating = ref(false)
+
+function loadPuzzle(puzzle) {
+  currentSolution.value = puzzle.solution
+  currentRowHints.value = puzzle.rowHints
+  currentColHints.value = puzzle.colHints
+  restart()
+}
 
 function onKeyDown(e) {
   if (e.key === 'Control' || e.key === 'Meta') {
@@ -112,10 +124,19 @@ function restart() {
   dragValue.value = null
 }
 
+async function generateNewPuzzle() {
+  if (isGenerating.value) return
+  isGenerating.value = true
+  const puzzle = await generatePuzzleAsync()
+  loadPuzzle(puzzle)
+  isGenerating.value = false
+}
+
 function checkComplete() {
+  if (!currentSolution.value) return
   for (let r = 0; r < SIZE; r++) {
     for (let c = 0; c < SIZE; c++) {
-      const expected = solution[r][c]
+      const expected = currentSolution.value[r][c]
       const actual = grid.value[r][c]
       if (expected === 1 && actual !== 1) return
       if (expected === 0 && actual === 1) return
@@ -134,6 +155,7 @@ const formattedTime = computed(() => {
 onMounted(() => {
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
+  generateNewPuzzle()
 })
 
 onUnmounted(() => {
@@ -181,14 +203,14 @@ onUnmounted(() => {
 
       <!-- Column hints -->
       <div class="col-hints">
-        <div v-for="(hints, c) in colHints" :key="c" class="col-hint">
+        <div v-for="(hints, c) in currentColHints" :key="c" class="col-hint">
           <div v-for="(n, i) in hints" :key="i" class="hint-num">{{ n }}</div>
         </div>
       </div>
 
       <!-- Row hints -->
       <div class="row-hints">
-        <div v-for="(hints, r) in rowHints" :key="r" class="row-hint">
+        <div v-for="(hints, r) in currentRowHints" :key="r" class="row-hint">
           <span v-for="(n, i) in hints" :key="i" class="hint-num">{{ n }}</span>
         </div>
       </div>
@@ -214,6 +236,10 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
+
+    <button class="action-btn new-btn" @click="generateNewPuzzle" :disabled="isGenerating">
+      {{ isGenerating ? 'Generating...' : 'New' }}
+    </button>
 
     <div v-if="isComplete" class="message">
       Completed in {{ formattedTime }}!
@@ -428,6 +454,13 @@ body {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+.new-btn {
+  margin-top: 8px;
+  padding: 10px 32px;
+  font-size: 1rem;
+  border: 2px solid #000;
 }
 
 @media (max-width: 480px) {
