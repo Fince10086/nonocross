@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { solution, rowHints, colHints } from './puzzle.js'
 
 const SIZE = 10
@@ -12,6 +12,27 @@ const seconds = ref(0)
 const isComplete = ref(false)
 const timerInterval = ref(null)
 const isRunning = ref(false)
+
+const isDragging = ref(false)
+const dragValue = ref(null)
+const ctrlDown = ref(false)
+
+function onKeyDown(e) {
+  if (e.key === 'Control' || e.key === 'Meta') {
+    if (!ctrlDown.value) {
+      ctrlDown.value = true
+    }
+  }
+}
+
+function onKeyUp(e) {
+  if (e.key === 'Control' || e.key === 'Meta') {
+    if (ctrlDown.value) {
+      ctrlDown.value = false
+      mode.value = mode.value === 'fill' ? 'x' : 'fill'
+    }
+  }
+}
 
 function startTimer() {
   if (!isRunning.value && !isComplete.value) {
@@ -38,25 +59,42 @@ function toggleMode(newMode) {
   mode.value = newMode
 }
 
-function cellClick(r, c) {
+function getTargetValue(button) {
+  // button: 0 = left, 2 = right
+  // left uses current mode, right uses reversed mode
+  const effectiveMode = button === 0 ? mode.value : (mode.value === 'fill' ? 'x' : 'fill')
+  return effectiveMode === 'fill' ? 1 : 2
+}
+
+function cellMouseDown(e, r, c) {
   if (isComplete.value) return
+  if (e.button !== 0 && e.button !== 2) return
+  e.preventDefault()
   startTimer()
   pushHistory()
-  if (mode.value === 'fill') {
-    grid.value[r][c] = grid.value[r][c] === 1 ? 0 : 1
-  } else {
-    grid.value[r][c] = grid.value[r][c] === 2 ? 0 : 2
-  }
+
+  const targetVal = getTargetValue(e.button)
+  const currentVal = grid.value[r][c]
+
+  // Toggle: if already target, clear; otherwise set target
+  dragValue.value = currentVal === targetVal ? 0 : targetVal
+  grid.value[r][c] = dragValue.value
+  isDragging.value = true
   checkComplete()
 }
 
-function cellRightClick(e, r, c) {
-  e.preventDefault()
-  if (isComplete.value) return
-  startTimer()
-  pushHistory()
-  grid.value[r][c] = grid.value[r][c] === 2 ? 0 : 2
-  checkComplete()
+function cellMouseEnter(r, c) {
+  if (!isDragging.value || isComplete.value) return
+  if (dragValue.value === 0) {
+    grid.value[r][c] = 0
+  } else if (grid.value[r][c] === 0) {
+    grid.value[r][c] = dragValue.value
+  }
+}
+
+function stopDragging() {
+  isDragging.value = false
+  dragValue.value = null
 }
 
 function undo() {
@@ -70,6 +108,8 @@ function restart() {
   grid.value = Array.from({ length: SIZE }, () => Array(SIZE).fill(0))
   history.value = []
   isComplete.value = false
+  isDragging.value = false
+  dragValue.value = null
 }
 
 function checkComplete() {
@@ -91,8 +131,15 @@ const formattedTime = computed(() => {
   return `${m}:${s}`
 })
 
+onMounted(() => {
+  window.addEventListener('keydown', onKeyDown)
+  window.addEventListener('keyup', onKeyUp)
+})
+
 onUnmounted(() => {
   stopTimer()
+  window.removeEventListener('keydown', onKeyDown)
+  window.removeEventListener('keyup', onKeyUp)
 })
 </script>
 
@@ -119,7 +166,7 @@ onUnmounted(() => {
         </button>
       </div>
       <div class="btn-group">
-        <button class="action-btn" @click="undo" :disabled="history.length === 0">
+        <button class="action-btn" @click="undo" :disabled="history.length === 0 || isComplete">
           Undo
         </button>
         <button class="action-btn" @click="restart">
@@ -147,15 +194,20 @@ onUnmounted(() => {
       </div>
 
       <!-- Grid -->
-      <div class="grid">
+      <div
+        class="grid"
+        @mouseup="stopDragging"
+        @mouseleave="stopDragging"
+      >
         <div v-for="(row, r) in grid" :key="r" class="row">
           <div
             v-for="(cell, c) in row"
             :key="c"
             class="cell"
             :class="{ filled: cell === 1, x: cell === 2 }"
-            @click="cellClick(r, c)"
-            @contextmenu.prevent="cellRightClick($event, r, c)"
+            @mousedown.prevent="cellMouseDown($event, r, c)"
+            @mouseenter="cellMouseEnter(r, c)"
+            @contextmenu.prevent
           >
             <span v-if="cell === 2" class="x-mark">X</span>
           </div>
