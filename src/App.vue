@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { generatePuzzleAsync } from './generator.js'
-import { encodePuzzle, decodePuzzle, getHints, fullSettle, sweepsToStars, formatStars } from './solver.js'
+import { encodePuzzle, decodePuzzle, getHints, fullSettle, sweepsToStars, formatStars, getDeterminedHints } from './solver.js'
 
 const currentSize = ref(10)
 const grid = ref([])
@@ -99,6 +99,28 @@ const availableStars = computed(() => {
 function createEmptyGrid(size) {
   return Array.from({ length: size }, () => Array(size).fill(0))
 }
+
+function gridToSolverState(val) {
+  if (val === 1) return 1
+  if (val === 2) return 0
+  return null
+}
+
+const rowHintDetermined = computed(() => {
+  if (!currentRowHints.value) return []
+  return currentRowHints.value.map((hints, r) => {
+    const state = grid.value[r].map(gridToSolverState)
+    return getDeterminedHints(state, hints)
+  })
+})
+
+const colHintDetermined = computed(() => {
+  if (!currentColHints.value) return []
+  return currentColHints.value.map((hints, c) => {
+    const state = grid.value.map(row => gridToSolverState(row[c]))
+    return getDeterminedHints(state, hints)
+  })
+})
 
 function loadPuzzle(puzzle) {
   currentSolution.value = puzzle.solution
@@ -413,14 +435,24 @@ onUnmounted(() => {
       <!-- Column hints -->
       <div class="col-hints">
         <div v-for="(hints, c) in currentColHints" :key="c" class="col-hint">
-          <div v-for="(n, i) in hints" :key="i" class="hint-num">{{ n }}</div>
+          <div
+            v-for="(n, i) in hints"
+            :key="i"
+            class="hint-num"
+            :class="{ 'hint-determined': colHintDetermined[c]?.has(i) }"
+          >{{ n }}</div>
         </div>
       </div>
 
       <!-- Row hints -->
       <div class="row-hints">
         <div v-for="(hints, r) in currentRowHints" :key="r" class="row-hint">
-          <span v-for="(n, i) in hints" :key="i" class="hint-num">{{ n }}</span>
+          <span
+            v-for="(n, i) in hints"
+            :key="i"
+            class="hint-num"
+            :class="{ 'hint-determined': rowHintDetermined[r]?.has(i) }"
+          >{{ n }}</span>
         </div>
       </div>
 
@@ -693,6 +725,10 @@ body {
   font-size: 0.75rem;
   font-weight: 600;
   line-height: 1;
+}
+
+.hint-determined {
+  color: #888;
 }
 
 .grid {

@@ -248,6 +248,76 @@ export function sweepsToStars(sweeps, size) {
   return 5
 }
 
+export function getDeterminedHints(state, hints) {
+  // state: 每格状态，null=空, 1=已填, 0=x/标记
+  // hints: 如 [1, 2, 2]
+  // 返回 Set<number>，已确定提示的索引（0-based）
+  const size = state.length
+
+  // 全空行特殊情况
+  if (hints.length === 1 && hints[0] === 0) {
+    const hasConflict = state.some(s => s === 1)
+    if (hasConflict) return new Set()
+    return new Set()
+  }
+
+  // 获取所有可能的合法排列
+  const allPossibilities = getLinePossibilities(hints, size)
+
+  // 过滤与当前状态兼容的排列
+  const valid = allPossibilities.filter(p => {
+    for (let i = 0; i < size; i++) {
+      if (state[i] === null) continue
+      if (state[i] !== p[i]) return false
+    }
+    return true
+  })
+
+  // 无合法解 -> 错误阻断
+  if (valid.length === 0) return new Set()
+
+  // 收集每个提示在所有合法解中的 [start, end] 位置
+  const positions = hints.map(() => [])
+
+  for (const p of valid) {
+    let pos = 0
+    for (let h = 0; h < hints.length; h++) {
+      const hint = hints[h]
+      while (pos < size && p[pos] === 0) pos++
+      const start = pos
+      const end = pos + hint - 1
+      positions[h].push([start, end])
+      pos = end + 1
+      if (pos < size && p[pos] === 0) pos++
+    }
+  }
+
+  const determined = new Set()
+
+  for (let h = 0; h < hints.length; h++) {
+    const posList = positions[h]
+    if (posList.length === 0) continue
+
+    const first = posList[0]
+    const allSame = posList.every(p => p[0] === first[0] && p[1] === first[1])
+    if (!allSame) continue
+
+    let allFilled = true
+    for (let i = first[0]; i <= first[1]; i++) {
+      if (state[i] !== 1) {
+        allFilled = false
+        break
+      }
+    }
+
+    if (allFilled) {
+      determined.add(h)
+    }
+  }
+
+  return determined
+}
+
 export function formatStars(rating) {
   const full = Math.floor(rating)
   const half = rating % 1 === 0.5
