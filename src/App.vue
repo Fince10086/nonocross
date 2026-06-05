@@ -269,7 +269,7 @@ onUnmounted(() => {
 
 <template>
   <div class="app">
-    <h1 class="title">NONOGRAM</h1>
+    <h1 class="title">NONOCROSS</h1>
 
     <div class="toolbar">
       <div class="timer">{{ formattedTime }}</div>
@@ -380,9 +380,19 @@ onUnmounted(() => {
           :value="currentPuzzleId || ''"
           @change="e => selectBankPuzzle(puzzlesForSize.find(p => p.id === e.target.value))"
         >
-          <option v-for="p in puzzlesForSize" :key="p.id" :value="p.id">
-            {{ p.id }}
-          </option>
+          <optgroup
+            v-for="star in [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]"
+            :key="star"
+            :label="formatStars(star)"
+          >
+            <option
+              v-for="p in puzzlesForSize.filter(x => x.stars === star)"
+              :key="p.id"
+              :value="p.id"
+            >
+              {{ p.id }}
+            </option>
+          </optgroup>
         </select>
       </div>
 

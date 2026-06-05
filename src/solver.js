@@ -230,18 +230,21 @@ export function randomGrid(size) {
 }
 
 const starThresholds = {
-  5:  [4, 5, 6, 7, 8, 10],
-  10: [8, 9, 11, 14, 18, 29],
-  15: [11, 15, 18, 21, 28, 37]
+  5:  [3, 4, 5, 6, 7, 8, 9, 10],
+  10: [7, 9, 11, 13, 15, 17, 20, 24],
+  15: [11, 14, 17, 19, 22, 25, 28, 32]
 }
 
 export function sweepsToStars(sweeps, size) {
   const t = starThresholds[size]
   if (sweeps <= t[0]) return 1
   if (sweeps <= t[1]) return 1.5
-  if (sweeps <= t[2]) return 2.5
-  if (sweeps <= t[3]) return 3.5
-  if (sweeps <= t[4]) return 4.5
+  if (sweeps <= t[2]) return 2
+  if (sweeps <= t[3]) return 2.5
+  if (sweeps <= t[4]) return 3
+  if (sweeps <= t[5]) return 3.5
+  if (sweeps <= t[6]) return 4
+  if (sweeps <= t[7]) return 4.5
   return 5
 }
 
