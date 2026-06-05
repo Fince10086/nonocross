@@ -6,9 +6,8 @@ import { VitePWA } from 'vite-plugin-pwa'
 const isAnalyze = process.env.ANALYZE === 'true'
 
 export default defineConfig({
-  // GitHub Pages 部署需要设置 base URL
-  // 如果部署到自定义域名，请将 base 改为 '/'
-  base: '/nonocross/',
+  // 自定义域名部署在根路径，base 使用 '/'
+  base: '/',
 
   plugins: [
     vue(),
