@@ -19,6 +19,7 @@ const seconds = ref(0);
 const isComplete = ref(false);
 const timerInterval = ref(null);
 const isRunning = ref(false);
+const isPaused = ref(false);
 
 const isDragging = ref(false);
 const dragValue = ref(null);
@@ -38,6 +39,125 @@ const puzzleBank = ref([]);
 const currentPuzzleId = ref(null);
 const puzzleBankLoaded = ref(false);
 const selectedStar = ref(1);
+
+const favorites = ref([]);
+const FAVORITES_KEY = "nonocross-favorites";
+
+function loadFavorites() {
+    try {
+        const raw = localStorage.getItem(FAVORITES_KEY);
+        if (raw) {
+            favorites.value = JSON.parse(raw);
+        }
+    } catch (e) {
+        console.error("Failed to load favorites:", e);
+        favorites.value = [];
+    }
+}
+
+function saveFavorites() {
+    try {
+        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites.value));
+    } catch (e) {
+        console.error("Failed to save favorites:", e);
+    }
+}
+
+const isInFavorites = computed(() => {
+    if (!currentSolution.value) return false;
+    const code = encodePuzzle(currentSolution.value);
+    return favorites.value.some((f) => f.code === code);
+});
+
+function saveCurrentPuzzle() {
+    if (!currentSolution.value) return;
+    const code = encodePuzzle(currentSolution.value);
+    const existingIndex = favorites.value.findIndex((f) => f.code === code);
+
+    const favorite = {
+        code,
+        size: currentSize.value,
+        stars: currentStars.value
+            ? parseFloat(currentStars.value.replace(/[^0-9.]/g, ""))
+            : null,
+        starsText: currentStars.value,
+        completed: isComplete.value,
+        grid: isComplete.value ? null : grid.value.map((row) => [...row]),
+        seconds: seconds.value,
+        savedAt: new Date().toISOString(),
+        completedAt: isComplete.value ? new Date().toISOString() : null,
+    };
+
+    if (existingIndex >= 0) {
+        favorites.value[existingIndex] = favorite;
+    } else {
+        favorites.value.push(favorite);
+    }
+    saveFavorites();
+}
+
+function deleteFromFavorites() {
+    if (!currentSolution.value) return;
+    const code = encodePuzzle(currentSolution.value);
+    favorites.value = favorites.value.filter((f) => f.code !== code);
+    saveFavorites();
+}
+
+function loadFavorite(fav) {
+    const result = decodePuzzle(fav.code);
+    if (!result) return;
+
+    const { size, solution } = result;
+    const rowHints = solution.map((row) => getHints(row));
+    const colHints = solution[0].map((_, colIndex) =>
+        getHints(solution.map((row) => row[colIndex])),
+    );
+
+    currentSize.value = size;
+    currentSolution.value = solution;
+    currentRowHints.value = rowHints;
+    currentColHints.value = colHints;
+    currentStars.value = fav.starsText;
+    currentPuzzleId.value = null;
+
+    if (fav.completed) {
+        // 已完成的，重新展示完成状态
+        grid.value = solution.map((row) =>
+            row.map((cell) => (cell === 1 ? 1 : 0)),
+        );
+        seconds.value = fav.seconds;
+        isComplete.value = true;
+        stopTimer();
+    } else if (fav.grid) {
+        // 未完成的，恢复进度
+        grid.value = fav.grid.map((row) => [...row]);
+        seconds.value = fav.seconds;
+        isComplete.value = false;
+        isRunning.value = false;
+        history.value = [];
+        startTimer();
+    } else {
+        restart();
+    }
+}
+
+function formatSavedTime(isoString) {
+    if (!isoString) return "";
+    const d = new Date(isoString);
+    return (
+        d.toLocaleDateString() +
+        " " +
+        d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    );
+}
+
+function formatTimeFromSeconds(totalSeconds) {
+    const m = Math.floor(totalSeconds / 60)
+        .toString()
+        .padStart(2, "0");
+    const s = (totalSeconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+}
 
 function enrichPuzzle(line) {
     // Format: id:size:solution:sweeps (e.g. 5x5-001:5:0101000000010100110010111:9)
@@ -160,7 +280,7 @@ function onKeyUp(e) {
 }
 
 function startTimer() {
-    if (!isRunning.value && !isComplete.value) {
+    if (!isRunning.value && !isComplete.value && !isPaused.value) {
         isRunning.value = true;
         timerInterval.value = setInterval(() => {
             seconds.value++;
@@ -171,6 +291,26 @@ function startTimer() {
 function stopTimer() {
     clearInterval(timerInterval.value);
     isRunning.value = false;
+}
+
+function pause() {
+    if (!isRunning.value || isComplete.value) return;
+    isPaused.value = true;
+    stopTimer();
+}
+
+function resume() {
+    if (!isPaused.value) return;
+    isPaused.value = false;
+    startTimer();
+}
+
+function togglePause() {
+    if (isPaused.value) {
+        resume();
+    } else {
+        pause();
+    }
 }
 
 function pushHistory() {
@@ -192,6 +332,10 @@ function getTargetValue(button) {
 
 function cellMouseDown(e, r, c) {
     if (isComplete.value) return;
+    if (isPaused.value) {
+        resume();
+        return;
+    }
     if (e.button !== 0 && e.button !== 2) return;
     e.preventDefault();
     startTimer();
@@ -231,6 +375,7 @@ function restart() {
     grid.value = createEmptyGrid(currentSize.value);
     history.value = [];
     isComplete.value = false;
+    isPaused.value = false;
     isDragging.value = false;
     dragValue.value = null;
 }
@@ -308,6 +453,17 @@ function checkComplete() {
     }
     isComplete.value = true;
     stopTimer();
+
+    // Update favorite if exists
+    const code = encodePuzzle(currentSolution.value);
+    const idx = favorites.value.findIndex((f) => f.code === code);
+    if (idx >= 0) {
+        favorites.value[idx].completed = true;
+        favorites.value[idx].completedAt = new Date().toISOString();
+        favorites.value[idx].seconds = seconds.value;
+        favorites.value[idx].grid = null;
+        saveFavorites();
+    }
 }
 
 const formattedTime = computed(() => {
@@ -363,6 +519,7 @@ watch(currentSize, () => {
 onMounted(() => {
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
+    loadFavorites();
     loadPuzzleBank().then(() => {
         const stars = [...new Set(puzzlesForSize.value.map((p) => p.stars))];
         if (stars.length > 0) {
@@ -390,38 +547,9 @@ onUnmounted(() => {
     <div class="app">
         <h1 class="title">NONOCROSS</h1>
 
-        <div class="toolbar">
+        <div class="top-bar">
             <div class="timer">{{ formattedTime }}</div>
-            <div class="btn-group">
-                <button
-                    class="mode-btn"
-                    :class="{ active: mode === 'fill' }"
-                    @click="toggleMode('fill')"
-                >
-                    Fill
-                </button>
-                <button
-                    class="mode-btn"
-                    :class="{ active: mode === 'x' }"
-                    @click="toggleMode('x')"
-                >
-                    Mark X
-                </button>
-            </div>
-            <div class="btn-group">
-                <button
-                    class="action-btn"
-                    @click="undo"
-                    :disabled="history.length === 0 || isComplete"
-                >
-                    Undo
-                </button>
-                <button class="action-btn" @click="restart">Restart</button>
-            </div>
-        </div>
-
-        <div class="size-selector">
-            <span class="label">Size:</span>
+            <div v-if="currentStars" class="difficulty-stars">{{ currentStars }}</div>
             <div class="btn-group">
                 <button
                     class="mode-btn"
@@ -447,14 +575,24 @@ onUnmounted(() => {
             </div>
         </div>
 
-        <div v-if="currentStars" class="difficulty-row">
-            <span class="label">Difficulty:</span>
-            <span class="difficulty-stars">{{ currentStars }}</span>
-        </div>
-
         <div class="board-wrapper" :class="{ complete: isComplete }">
             <!-- Top-left spacer -->
-            <div class="spacer"></div>
+            <div class="spacer">
+                <div
+                    class="mode-top"
+                    :class="{ active: mode === 'fill' }"
+                    @click="toggleMode('fill')"
+                >
+                    Fill
+                </div>
+                <div
+                    class="mode-bottom"
+                    :class="{ active: mode === 'x' }"
+                    @click="toggleMode('x')"
+                >
+                    X
+                </div>
+            </div>
 
             <!-- Column hints -->
             <div class="col-hints">
@@ -523,16 +661,51 @@ onUnmounted(() => {
                         @mouseenter="cellMouseEnter(r, c)"
                         @contextmenu.prevent
                     >
-                        <span v-if="cell === 2" class="x-mark">X</span>
+                        <span v-if="cell === 2" class="x-mark">✕</span>
                     </div>
                 </div>
+            </div>
+
+            <!-- Pause overlay -->
+            <div
+                v-if="isPaused"
+                class="pause-overlay"
+                @click="resume"
+            >
+                <span class="pause-text">PAUSED</span>
             </div>
         </div>
 
         <div class="controls">
-            <div v-if="puzzleBankLoaded" class="puzzle-picker">
-                <div class="picker-row">
-                    <span class="label">Star:</span>
+            <!-- Row 1: Game actions -->
+            <div class="controls-row">
+                <div class="btn-group">
+                    <button class="action-btn" @click="togglePause">
+                        {{ isPaused ? "Resume" : "Pause" }}
+                    </button>
+                    <button
+                        class="action-btn"
+                        @click="undo"
+                        :disabled="history.length === 0 || isComplete"
+                    >
+                        Undo
+                    </button>
+                    <button class="action-btn" @click="restart">
+                        Restart
+                    </button>
+                    <button
+                        class="action-btn"
+                        @click="generateNewPuzzle"
+                        :disabled="isGenerating"
+                    >
+                        {{ isGenerating ? "Generating..." : "New Random" }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Row 2: Puzzle picker -->
+            <div v-if="puzzleBankLoaded" class="controls-row">
+                <div class="btn-group picker-group">
                     <select
                         class="puzzle-select"
                         :value="selectedStar"
@@ -546,9 +719,6 @@ onUnmounted(() => {
                             {{ formatStars(star) }}
                         </option>
                     </select>
-                </div>
-                <div class="picker-row">
-                    <span class="label">Puzzle:</span>
                     <select
                         class="puzzle-select"
                         :value="currentPuzzleId || ''"
@@ -572,19 +742,69 @@ onUnmounted(() => {
                 </div>
             </div>
 
-            <button
-                class="action-btn new-btn"
-                @click="generateNewPuzzle"
-                :disabled="isGenerating"
-            >
-                {{ isGenerating ? "Generating..." : "New Random" }}
-            </button>
+            <!-- Row 3: Import / Export / Save / Delete -->
+            <div class="controls-row">
+                <div class="btn-group">
+                    <button
+                        class="action-btn"
+                        @click="showImportDialog = true"
+                    >
+                        Import
+                    </button>
+                    <button class="action-btn" @click="exportPuzzle">
+                        Export
+                    </button>
+                    <button
+                        class="action-btn"
+                        @click="saveCurrentPuzzle"
+                        :disabled="!currentSolution"
+                    >
+                        {{ isInFavorites ? "Update" : "Save" }}
+                    </button>
+                    <button
+                        class="action-btn"
+                        @click="deleteFromFavorites"
+                        :disabled="!isInFavorites"
+                    >
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
 
-            <div class="btn-group">
-                <button class="action-btn" @click="exportPuzzle">Export</button>
-                <button class="action-btn" @click="showImportDialog = true">
-                    Import
-                </button>
+        <div v-if="favorites.length > 0" class="favorites-section">
+            <div class="favorites-header">
+                <span class="label">Favorites ({{ favorites.length }})</span>
+            </div>
+            <div class="favorites-list">
+                <div
+                    v-for="fav in favorites"
+                    :key="fav.code"
+                    class="favorite-item"
+                    :class="{ completed: fav.completed }"
+                    @click="loadFavorite(fav)"
+                >
+                    <div class="fav-code">
+                        {{ fav.code.split(":")[1]?.slice(0, 8) || "Custom" }}...
+                    </div>
+                    <div class="fav-meta">
+                        <span class="fav-size"
+                            >{{ fav.size }}×{{ fav.size }}</span
+                        >
+                        <span v-if="fav.starsText" class="fav-stars">{{
+                            fav.starsText
+                        }}</span>
+                        <span v-if="fav.completed" class="fav-status"
+                            >✓ {{ formatTimeFromSeconds(fav.seconds) }}</span
+                        >
+                        <span v-else class="fav-status in-progress"
+                            >⏱ {{ formatTimeFromSeconds(fav.seconds) }}</span
+                        >
+                    </div>
+                    <div class="fav-saved">
+                        {{ formatSavedTime(fav.savedAt) }}
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -637,15 +857,12 @@ onUnmounted(() => {
 }
 
 body {
-    font-family:
-        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-        sans-serif;
+    font-family: "Outfit", sans-serif;
     background: #fff;
     color: #000;
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
     padding: 20px;
 }
 
@@ -662,23 +879,17 @@ body {
     letter-spacing: 0.15em;
 }
 
-.difficulty-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.difficulty-stars {
-    font-size: 1rem;
-    font-weight: 600;
-}
-
-.toolbar {
+.top-bar {
     display: flex;
     align-items: center;
     gap: 24px;
     flex-wrap: wrap;
     justify-content: center;
+}
+
+.difficulty-stars {
+    font-size: 1rem;
+    font-weight: 600;
 }
 
 .timer {
@@ -727,18 +938,8 @@ body {
     cursor: not-allowed;
 }
 
-.size-selector {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.label {
-    font-size: 0.875rem;
-    font-weight: 600;
-}
-
 .board-wrapper {
+    position: relative;
     display: grid;
     grid-template-columns: auto 1fr;
     grid-template-rows: auto 1fr;
@@ -747,8 +948,46 @@ body {
 }
 
 .spacer {
+    display: flex;
+    flex-direction: column;
     border-right: 2px solid #000;
     border-bottom: 2px solid #000;
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.mode-top,
+.mode-bottom {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #000;
+    transition:
+        background-color 0.15s,
+        color 0.15s;
+    user-select: none;
+}
+
+.mode-top {
+    border-bottom: 1px solid #000;
+}
+
+.mode-top.active {
+    background-color: #000;
+    color: #fff;
+}
+
+.mode-bottom.active {
+    background-color: #b71c1c;
+    color: #fff;
+}
+
+.mode-top:hover:not(.active),
+.mode-bottom:hover:not(.active) {
+    background-color: rgba(0, 0, 0, 0.05);
 }
 
 .col-hints {
@@ -843,9 +1082,27 @@ body {
 }
 
 .x-mark {
-    font-size: 1rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #b71c1c;
+}
+
+.pause-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(200, 200, 200, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    cursor: pointer;
+}
+
+.pause-text {
+    font-size: 2rem;
     font-weight: 700;
     color: #000;
+    letter-spacing: 0.2em;
 }
 
 .board-wrapper.complete .cell {
@@ -854,22 +1111,27 @@ body {
 
 .controls {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.controls-row {
+    display: flex;
     justify-content: center;
 }
 
-.puzzle-picker {
+.picker-group {
     display: flex;
-    align-items: center;
-    gap: 16px;
 }
 
-.picker-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+.picker-group .puzzle-select {
+    border: none;
+    border-right: 2px solid #000;
+}
+
+.picker-group .puzzle-select:last-child {
+    border-right: none;
 }
 
 .puzzle-select {
@@ -879,12 +1141,6 @@ body {
     border: 2px solid #000;
     background: #fff;
     cursor: pointer;
-}
-
-.new-btn {
-    padding: 10px 24px;
-    font-size: 1rem;
-    border: 2px solid #000;
 }
 
 .toast {
@@ -954,6 +1210,82 @@ body {
     animation: fadeIn 0.4s ease;
 }
 
+.favorites-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    max-width: 600px;
+}
+
+.favorites-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.favorites-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+}
+
+.favorite-item {
+    border: 2px solid #000;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.15s;
+    min-width: 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.favorite-item:hover {
+    background-color: #f5f5f5;
+}
+
+.favorite-item.completed {
+    border-color: #888;
+    opacity: 0.8;
+}
+
+.fav-code {
+    font-size: 0.75rem;
+    font-weight: 700;
+    word-break: break-all;
+}
+
+.fav-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 0.75rem;
+}
+
+.fav-size {
+    font-weight: 600;
+}
+
+.fav-stars {
+    font-size: 0.7rem;
+}
+
+.fav-status {
+    font-weight: 600;
+    color: #388e3c;
+}
+
+.fav-status.in-progress {
+    color: #f57c00;
+}
+
+.fav-saved {
+    font-size: 0.65rem;
+    color: #888;
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -965,29 +1297,28 @@ body {
     }
 }
 
-@media (max-width: 480px) {
-    .title {
+@media (max-width: 600px) {
+    .top-bar {
+        gap: 12px;
+    }
+
+    .timer {
+        font-size: 1.1rem;
+        min-width: 50px;
+    }
+
+    .difficulty-stars {
+        font-size: 0.875rem;
+    }
+
+    .mode-btn,
+    .action-btn {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+
+    .pause-text {
         font-size: 1.5rem;
-    }
-
-    .cell {
-        width: 28px !important;
-        height: 28px !important;
-    }
-
-    .col-hint {
-        width: 28px !important;
-        height: 60px !important;
-    }
-
-    .row-hint {
-        width: 60px !important;
-        height: 28px !important;
-    }
-
-    .spacer {
-        width: 60px !important;
-        height: 60px !important;
     }
 }
 </style>
