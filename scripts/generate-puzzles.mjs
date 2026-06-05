@@ -48,6 +48,7 @@ async function generateBatchByStars(size) {
   for (const star of STAR_LEVELS) {
     for (const p of buckets[star]) {
       p.id = `${size}x${size}-${String(idx).padStart(3, '0')}`
+      p.size = size
       all.push(p)
       idx++
     }

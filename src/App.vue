@@ -29,11 +29,54 @@ const showExportToast = ref(false)
 const puzzleBank = ref([])
 const currentPuzzleId = ref(null)
 const puzzleBankLoaded = ref(false)
+const selectedStar = ref(1)
+
+function enrichPuzzle(line) {
+  // Format: id:size:solution:sweeps (e.g. 5x5-001:5:0101000000010100110010111:9)
+  const parts = line.split(':')
+  if (parts.length !== 4) return null
+
+  const id = parts[0]
+  const size = parseInt(parts[1], 10)
+  const solutionStr = parts[2]
+  const sweeps = parseInt(parts[3], 10)
+
+  // Convert string to 2D array
+  const solution = []
+  for (let r = 0; r < size; r++) {
+    const row = []
+    for (let c = 0; c < size; c++) {
+      row.push(parseInt(solutionStr[r * size + c], 10))
+    }
+    solution.push(row)
+  }
+
+  const rowHints = solution.map(row => getHints(row))
+  const colHints = solution[0].map((_, colIndex) =>
+    getHints(solution.map(row => row[colIndex]))
+  )
+
+  const stars = sweepsToStars(sweeps, size)
+  const starsText = formatStars(stars)
+
+  return {
+    id,
+    size,
+    solution,
+    rowHints,
+    colHints,
+    sweeps,
+    stars,
+    starsText
+  }
+}
 
 async function loadPuzzleBank() {
   try {
     const res = await fetch('/puzzles.json')
-    puzzleBank.value = await res.json()
+    const text = await res.text()
+    const lines = text.trim().split('\n').filter(line => line.trim())
+    puzzleBank.value = lines.map(enrichPuzzle).filter(Boolean)
     puzzleBankLoaded.value = true
   } catch (e) {
     console.error('Failed to load puzzle bank:', e)
@@ -42,6 +85,15 @@ async function loadPuzzleBank() {
 
 const puzzlesForSize = computed(() => {
   return puzzleBank.value.filter(p => p.size === currentSize.value)
+})
+
+const puzzlesForStar = computed(() => {
+  return puzzlesForSize.value.filter(p => p.stars === selectedStar.value)
+})
+
+const availableStars = computed(() => {
+  const stars = new Set(puzzlesForSize.value.map(p => p.stars))
+  return [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5].filter(s => stars.has(s))
 })
 
 function createEmptyGrid(size) {
@@ -237,10 +289,26 @@ const hintAreaSize = computed(() => {
 function changeSize(size) {
   currentSize.value = size
   restart()
-  if (puzzlesForSize.value.length > 0) {
-    selectBankPuzzle(puzzlesForSize.value[0])
+  // Auto-select first available star for this size
+  const stars = [...new Set(puzzlesForSize.value.map(p => p.stars))]
+  if (stars.length > 0) {
+    selectedStar.value = Math.min(...stars)
+    const puzzles = puzzlesForStar.value
+    if (puzzles.length > 0) {
+      selectBankPuzzle(puzzles[0])
+    } else {
+      generateNewPuzzle()
+    }
   } else {
     generateNewPuzzle()
+  }
+}
+
+function selectStar(star) {
+  selectedStar.value = star
+  const puzzles = puzzlesForStar.value
+  if (puzzles.length > 0) {
+    selectBankPuzzle(puzzles[0])
   }
 }
 
@@ -252,8 +320,15 @@ onMounted(() => {
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
   loadPuzzleBank().then(() => {
-    if (puzzlesForSize.value.length > 0) {
-      selectBankPuzzle(puzzlesForSize.value[0])
+    const stars = [...new Set(puzzlesForSize.value.map(p => p.stars))]
+    if (stars.length > 0) {
+      selectedStar.value = Math.min(...stars)
+      const puzzles = puzzlesForStar.value
+      if (puzzles.length > 0) {
+        selectBankPuzzle(puzzles[0])
+      } else {
+        generateNewPuzzle()
+      }
     } else {
       generateNewPuzzle()
     }
@@ -374,26 +449,38 @@ onUnmounted(() => {
 
     <div class="controls">
       <div v-if="puzzleBankLoaded" class="puzzle-picker">
-        <span class="label">Puzzle:</span>
-        <select
-          class="puzzle-select"
-          :value="currentPuzzleId || ''"
-          @change="e => selectBankPuzzle(puzzlesForSize.find(p => p.id === e.target.value))"
-        >
-          <optgroup
-            v-for="star in [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]"
-            :key="star"
-            :label="formatStars(star)"
+        <div class="picker-row">
+          <span class="label">Star:</span>
+          <select
+            class="puzzle-select"
+            :value="selectedStar"
+            @change="e => selectStar(parseFloat(e.target.value))"
           >
             <option
-              v-for="p in puzzlesForSize.filter(x => x.stars === star)"
+              v-for="star in availableStars"
+              :key="star"
+              :value="star"
+            >
+              {{ formatStars(star) }}
+            </option>
+          </select>
+        </div>
+        <div class="picker-row">
+          <span class="label">Puzzle:</span>
+          <select
+            class="puzzle-select"
+            :value="currentPuzzleId || ''"
+            @change="e => selectBankPuzzle(puzzlesForStar.find(p => p.id === e.target.value))"
+          >
+            <option
+              v-for="p in puzzlesForStar"
               :key="p.id"
               :value="p.id"
             >
               {{ p.id }}
             </option>
-          </optgroup>
-        </select>
+          </select>
+        </div>
       </div>
 
       <button class="action-btn new-btn" @click="generateNewPuzzle" :disabled="isGenerating">
@@ -666,6 +753,12 @@ body {
 }
 
 .puzzle-picker {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.picker-row {
   display: flex;
   align-items: center;
   gap: 8px;
