@@ -83,10 +83,11 @@ export function fullSettle(rowHints, colHints, knownGrid = null) {
     ? knownGrid.map(row => [...row])
     : Array.from({ length: rows }, () => Array(cols).fill(null))
 
+  let sweeps = 0
   let changed = true
   while (changed) {
     changed = false
-    // Horizontal sweep
+    // Horizontal sweep (1 round)
     for (let r = 0; r < rows; r++) {
       const line = grid[r]
       const determined = determineLine(line, rowHints[r])
@@ -97,10 +98,11 @@ export function fullSettle(rowHints, colHints, knownGrid = null) {
         }
       }
     }
+    sweeps++
     if (!changed) break
 
     changed = false
-    // Vertical sweep
+    // Vertical sweep (1 round)
     for (let c = 0; c < cols; c++) {
       const line = []
       for (let r = 0; r < rows; r++) line.push(grid[r][c])
@@ -112,6 +114,7 @@ export function fullSettle(rowHints, colHints, knownGrid = null) {
         }
       }
     }
+    sweeps++
   }
 
   let solved = true
@@ -124,7 +127,7 @@ export function fullSettle(rowHints, colHints, knownGrid = null) {
     }
   }
 
-  return { grid, solved }
+  return { grid, solved, sweeps }
 }
 
 export function countSolutions(rowHints, colHints) {
@@ -226,6 +229,29 @@ export function randomGrid(size) {
   return grid
 }
 
+const starThresholds = {
+  5:  [4, 5, 6, 7, 8, 10],
+  10: [8, 9, 11, 14, 18, 29],
+  15: [11, 15, 18, 21, 28, 37]
+}
+
+export function sweepsToStars(sweeps, size) {
+  const t = starThresholds[size]
+  if (sweeps <= t[0]) return 1
+  if (sweeps <= t[1]) return 1.5
+  if (sweeps <= t[2]) return 2.5
+  if (sweeps <= t[3]) return 3.5
+  if (sweeps <= t[4]) return 4.5
+  return 5
+}
+
+export function formatStars(rating) {
+  const full = Math.floor(rating)
+  const half = rating % 1 === 0.5
+  const empty = 5 - full - (half ? 1 : 0)
+  return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(empty)
+}
+
 export function generatePuzzle(size, maxAttempts = 50) {
   let solution = randomGrid(size)
   let rowHints = solution.map(row => getHints(row))
@@ -237,18 +263,18 @@ export function generatePuzzle(size, maxAttempts = 50) {
 
   while (attempts < maxAttempts) {
     // Check logic solvability with FullSettle
-    const { solved } = fullSettle(rowHints, colHints)
+    const { solved, sweeps } = fullSettle(rowHints, colHints)
 
     if (solved) {
       // Verify uniqueness
       const solCount = countSolutions(rowHints, colHints)
       if (solCount === 1) {
-        return { solution, rowHints, colHints }
+        const stars = sweepsToStars(sweeps, size)
+        return { solution, rowHints, colHints, sweeps, stars, starsText: formatStars(stars) }
       }
     }
 
     // Adapt: flip a random cell to improve solvability
-    // Prefer white cells (add black) when not solved, or random when solved but multi-solution
     const { grid: settled } = fullSettle(rowHints, colHints)
     const unsolved = []
     for (let r = 0; r < size; r++) {
@@ -260,11 +286,9 @@ export function generatePuzzle(size, maxAttempts = 50) {
     }
 
     if (unsolved.length > 0) {
-      // Add a black cell in an unsolved area
       const [r, c] = unsolved[Math.floor(Math.random() * unsolved.length)]
       solution[r][c] = 1
     } else {
-      // Solved but multi-solution: flip a random cell
       const r = Math.floor(Math.random() * size)
       const c = Math.floor(Math.random() * size)
       solution[r][c] = solution[r][c] === 1 ? 0 : 1
@@ -278,6 +302,67 @@ export function generatePuzzle(size, maxAttempts = 50) {
     attempts++
   }
 
-  // Fallback: return whatever we have (may not be unique)
-  return { solution, rowHints, colHints }
+  // Fallback
+  const { sweeps } = fullSettle(rowHints, colHints)
+  const stars = sweepsToStars(sweeps, size)
+  return { solution, rowHints, colHints, sweeps, stars, starsText: formatStars(stars) }
+}
+
+export function encodePuzzle(solution) {
+  const size = solution.length
+  const bits = []
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      bits.push(solution[r][c])
+    }
+  }
+
+  // Pad to multiple of 6
+  while (bits.length % 6 !== 0) {
+    bits.push(0)
+  }
+
+  const chars = []
+  const base64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+  for (let i = 0; i < bits.length; i += 6) {
+    let val = 0
+    for (let j = 0; j < 6; j++) {
+      val = (val << 1) | bits[i + j]
+    }
+    chars.push(base64[val])
+  }
+
+  return `${size}:${chars.join('')}`
+}
+
+export function decodePuzzle(code) {
+  const parts = code.split(':')
+  if (parts.length !== 2) return null
+
+  const size = parseInt(parts[0], 10)
+  const encoded = parts[1]
+  if (!size || !encoded || size < 1) return null
+
+  const base64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+  const bits = []
+
+  for (const ch of encoded) {
+    const idx = base64.indexOf(ch)
+    if (idx === -1) return null
+    for (let i = 5; i >= 0; i--) {
+      bits.push((idx >> i) & 1)
+    }
+  }
+
+  const solution = []
+  for (let r = 0; r < size; r++) {
+    const row = []
+    for (let c = 0; c < size; c++) {
+      const pos = r * size + c
+      row.push(bits[pos] || 0)
+    }
+    solution.push(row)
+  }
+
+  return { size, solution }
 }

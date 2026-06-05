@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { generatePuzzleAsync } from './generator.js'
+import { encodePuzzle, decodePuzzle, getHints, fullSettle, sweepsToStars, formatStars } from './solver.js'
 
 const currentSize = ref(10)
 const grid = ref([])
@@ -18,7 +19,12 @@ const ctrlDown = ref(false)
 const currentSolution = ref(null)
 const currentRowHints = ref(null)
 const currentColHints = ref(null)
+const currentStars = ref(null)
 const isGenerating = ref(false)
+const showImportDialog = ref(false)
+const importCode = ref('')
+const importError = ref('')
+const showExportToast = ref(false)
 
 const puzzleBank = ref([])
 const currentPuzzleId = ref(null)
@@ -46,6 +52,7 @@ function loadPuzzle(puzzle) {
   currentSolution.value = puzzle.solution
   currentRowHints.value = puzzle.rowHints
   currentColHints.value = puzzle.colHints
+  currentStars.value = puzzle.starsText || null
   currentPuzzleId.value = puzzle.id || null
   restart()
 }
@@ -155,6 +162,44 @@ async function generateNewPuzzle() {
 
 function selectBankPuzzle(puzzle) {
   loadPuzzle(puzzle)
+}
+
+function exportPuzzle() {
+  if (!currentSolution.value) return
+  const code = encodePuzzle(currentSolution.value)
+  navigator.clipboard.writeText(code).catch(() => {})
+  showExportToast.value = true
+  setTimeout(() => { showExportToast.value = false }, 2000)
+}
+
+function importPuzzle() {
+  importError.value = ''
+  const result = decodePuzzle(importCode.value.trim())
+  if (!result) {
+    importError.value = 'Invalid code format'
+    return
+  }
+
+  const { size, solution } = result
+  const rowHints = solution.map(row => getHints(row))
+  const colHints = solution[0].map((_, colIndex) =>
+    getHints(solution.map(row => row[colIndex]))
+  )
+
+  // Verify solvability and calculate difficulty
+  const { solved, sweeps } = fullSettle(rowHints, colHints)
+  if (!solved) {
+    importError.value = 'This puzzle is not logically solvable'
+    return
+  }
+
+  const stars = sweepsToStars(sweeps, size)
+  const starsText = formatStars(stars)
+
+  currentSize.value = size
+  loadPuzzle({ solution, rowHints, colHints, sweeps, stars, starsText, id: null })
+  showImportDialog.value = false
+  importCode.value = ''
 }
 
 function checkComplete() {
@@ -281,6 +326,11 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <div v-if="currentStars" class="difficulty-row">
+      <span class="label">Difficulty:</span>
+      <span class="difficulty-stars">{{ currentStars }}</span>
+    </div>
+
     <div class="board-wrapper" :class="{ complete: isComplete }">
       <!-- Top-left spacer -->
       <div class="spacer"></div>
@@ -339,6 +389,38 @@ onUnmounted(() => {
       <button class="action-btn new-btn" @click="generateNewPuzzle" :disabled="isGenerating">
         {{ isGenerating ? 'Generating...' : 'New Random' }}
       </button>
+
+      <div class="btn-group">
+        <button class="action-btn" @click="exportPuzzle">
+          Export
+        </button>
+        <button class="action-btn" @click="showImportDialog = true">
+          Import
+        </button>
+      </div>
+    </div>
+
+    <div v-if="showExportToast" class="toast">
+      Code copied to clipboard
+    </div>
+
+    <div v-if="showImportDialog" class="modal-overlay" @click.self="showImportDialog = false">
+      <div class="modal">
+        <h3 class="modal-title">Import Puzzle</h3>
+        <p class="modal-desc">Paste the puzzle code below:</p>
+        <input
+          v-model="importCode"
+          type="text"
+          class="modal-input"
+          placeholder="10:AAECAwQFBgcICQ=="
+          @keyup.enter="importPuzzle"
+        />
+        <p v-if="importError" class="modal-error">{{ importError }}</p>
+        <div class="modal-actions">
+          <button class="action-btn" @click="importPuzzle">Import</button>
+          <button class="action-btn" @click="showImportDialog = false; importError = ''">Cancel</button>
+        </div>
+      </div>
     </div>
 
     <div v-if="isComplete" class="message">
@@ -376,6 +458,17 @@ body {
   font-size: 2rem;
   font-weight: 700;
   letter-spacing: 0.15em;
+}
+
+.difficulty-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.difficulty-stars {
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 .toolbar {
@@ -581,6 +674,67 @@ body {
   padding: 10px 24px;
   font-size: 1rem;
   border: 2px solid #000;
+}
+
+.toast {
+  padding: 8px 16px;
+  background: #000;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.8);
+  z-index: 100;
+}
+
+.modal {
+  background: #fff;
+  border: 2px solid #000;
+  padding: 24px;
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.modal-desc {
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.modal-input {
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 2px solid #000;
+  width: 100%;
+}
+
+.modal-error {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #c00;
+  margin: 0;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .message {
