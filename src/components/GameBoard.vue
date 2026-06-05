@@ -52,17 +52,6 @@ function cellStyle(r, c) {
 }
 
 /**
- * 获取左上角间隔区样式
- * @returns {object} CSS 样式对象
- */
-function spacerStyle() {
-  return {
-    width: props.hintAreaSize,
-    height: props.hintAreaSize,
-  }
-}
-
-/**
  * 获取列提示区样式
  * @returns {object} CSS 样式对象
  */
@@ -152,7 +141,7 @@ function onResume() {
     @touchcancel="onStopDragging"
   >
     <!-- 左上角间隔区（模式切换） -->
-    <div class="spacer" :style="spacerStyle()">
+    <div class="spacer">
       <div
         class="mode-top"
         :class="{ active: mode === 'fill' }"

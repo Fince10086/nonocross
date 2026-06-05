@@ -1,317 +1,322 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useTimer } from './composables/useTimer.js'
-import { useFavorites } from './composables/useFavorites.js'
-import { useGame } from './composables/useGame.js'
+import { ref, computed, onMounted, onUnmounted } from "vue";
+import { useTimer } from "./composables/useTimer.js";
+import { useFavorites } from "./composables/useFavorites.js";
+import { useGame } from "./composables/useGame.js";
 
-import GameBoard from './components/GameBoard.vue'
-import GameControls from './components/GameControls.vue'
-import PuzzleSelector from './components/PuzzleSelector.vue'
-import FavoritesPanel from './components/FavoritesPanel.vue'
-import ImportModal from './components/ImportModal.vue'
+import GameBoard from "./components/GameBoard.vue";
+import GameControls from "./components/GameControls.vue";
+import PuzzleSelector from "./components/PuzzleSelector.vue";
+import FavoritesPanel from "./components/FavoritesPanel.vue";
+import ImportModal from "./components/ImportModal.vue";
 
-const timer = useTimer()
-const favorites = useFavorites()
-const game = useGame(timer, favorites)
+const timer = useTimer();
+const favorites = useFavorites();
+const game = useGame(timer, favorites);
 
-const showImportDialog = ref(false)
-const showExportToast = ref(false)
-const importModalRef = ref(null)
+const showImportDialog = ref(false);
+const showExportToast = ref(false);
+const importModalRef = ref(null);
 
 const isInFavoritesComputed = computed(() => {
-  return favorites.isInFavorites(game.currentSolution.value)
-})
+    return favorites.isInFavorites(game.currentSolution.value);
+});
 
 function handleTogglePause() {
-  timer.togglePause()
+    timer.togglePause();
 }
 
 function handleShowImport() {
-  showImportDialog.value = true
+    showImportDialog.value = true;
 }
 
 function handleCloseImport() {
-  showImportDialog.value = false
+    showImportDialog.value = false;
 }
 
 function handleImportPuzzle(code) {
-  const result = game.importPuzzle(code)
-  if (result.success) {
-    showImportDialog.value = false
-  } else {
-    importModalRef.value?.setError(result.error)
-  }
+    const result = game.importPuzzle(code);
+    if (result.success) {
+        showImportDialog.value = false;
+    } else {
+        importModalRef.value?.setError(result.error);
+    }
 }
 
 /**
  * 导出当前谜题到剪贴板
  */
 async function handleExportPuzzle() {
-  const code = game.exportPuzzle()
-  if (!code) return
-  try {
-    await navigator.clipboard.writeText(code)
-    showExportToast.value = true
-    setTimeout(() => {
-      showExportToast.value = false
-    }, 2000)
-  } catch (e) {
-    console.error('复制到剪贴板失败:', e)
-    alert('复制失败，请手动复制以下编码:\n' + code)
-  }
+    const code = game.exportPuzzle();
+    if (!code) return;
+    try {
+        await navigator.clipboard.writeText(code);
+        showExportToast.value = true;
+        setTimeout(() => {
+            showExportToast.value = false;
+        }, 2000);
+    } catch (e) {
+        console.error("复制到剪贴板失败:", e);
+        alert("复制失败，请手动复制以下编码:\n" + code);
+    }
 }
 
 function handleSaveCurrentPuzzle() {
-  favorites.saveCurrentPuzzle({
-    solution: game.currentSolution.value,
-    size: game.currentSize.value,
-    starsText: game.currentStars.value,
-    isComplete: game.isComplete.value,
-    grid: game.grid.value,
-    seconds: timer.seconds.value,
-  })
+    favorites.saveCurrentPuzzle({
+        solution: game.currentSolution.value,
+        size: game.currentSize.value,
+        starsText: game.currentStars.value,
+        isComplete: game.isComplete.value,
+        grid: game.grid.value,
+        seconds: timer.seconds.value,
+    });
 }
 
 function handleDeleteFromFavorites() {
-  favorites.deleteFromFavorites(game.currentSolution.value)
+    favorites.deleteFromFavorites(game.currentSolution.value);
 }
 
 function handleLoadFavorite(fav) {
-  const data = favorites.loadFavoriteData(fav)
-  if (!data) return
+    const data = favorites.loadFavoriteData(fav);
+    if (!data) return;
 
-  game.currentSize.value = data.size
-  game.currentSolution.value = data.solution
-  game.currentRowHints.value = data.rowHints
-  game.currentColHints.value = data.colHints
-  game.currentStars.value = data.starsText
-  game.currentPuzzleId.value = null
+    game.currentSize.value = data.size;
+    game.currentSolution.value = data.solution;
+    game.currentRowHints.value = data.rowHints;
+    game.currentColHints.value = data.colHints;
+    game.currentStars.value = data.starsText;
+    game.currentPuzzleId.value = null;
 
-  if (data.isComplete) {
-    game.grid.value = data.solution.map((row) =>
-      row.map((cell) => (cell === 1 ? 1 : 0)),
-    )
-    timer.setTime(data.seconds)
-    game.isComplete.value = true
-    timer.stop()
-  } else if (data.grid) {
-    game.grid.value = data.grid.map((row) => [...row])
-    timer.setTime(data.seconds)
-    game.isComplete.value = false
-    timer.reset()
-    game.history.value = []
-    timer.start()
-  } else {
-    game.restart()
-  }
+    if (data.isComplete) {
+        game.grid.value = data.solution.map((row) =>
+            row.map((cell) => (cell === 1 ? 1 : 0)),
+        );
+        timer.setTime(data.seconds);
+        game.isComplete.value = true;
+        timer.stop();
+    } else if (data.grid) {
+        game.grid.value = data.grid.map((row) => [...row]);
+        timer.setTime(data.seconds);
+        game.isComplete.value = false;
+        timer.reset();
+        game.history.value = [];
+        timer.start();
+    } else {
+        game.restart();
+    }
 }
 
 function handleKeyDown(e) {
-  game.onKeyDown(e)
+    game.onKeyDown(e);
 }
 
 function handleKeyUp(e) {
-  game.onKeyUp(e)
+    game.onKeyUp(e);
 }
 
 onMounted(() => {
-  window.addEventListener('keydown', handleKeyDown)
-  window.addEventListener('keyup', handleKeyUp)
-  favorites.loadFavorites()
-  game.loadPuzzleBank().then(() => {
-    const stars = [...new Set(game.puzzlesForSize.value.map((p) => p.stars))]
-    if (stars.length > 0) {
-      game.selectedStar.value = Math.min(...stars)
-      const puzzles = game.puzzlesForStar.value
-      if (puzzles.length > 0) {
-        game.selectBankPuzzle(puzzles[0])
-      } else {
-        game.generateNewPuzzle()
-      }
-    } else {
-      game.generateNewPuzzle()
-    }
-  })
-})
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    favorites.loadFavorites();
+    game.loadPuzzleBank().then(() => {
+        const stars = [
+            ...new Set(game.puzzlesForSize.value.map((p) => p.stars)),
+        ];
+        if (stars.length > 0) {
+            game.selectedStar.value = Math.min(...stars);
+            const puzzles = game.puzzlesForStar.value;
+            if (puzzles.length > 0) {
+                game.selectBankPuzzle(puzzles[0]);
+            } else {
+                game.generateNewPuzzle();
+            }
+        } else {
+            game.generateNewPuzzle();
+        }
+    });
+});
 
 onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeyDown)
-  window.removeEventListener('keyup', handleKeyUp)
-})
+    window.removeEventListener("keydown", handleKeyDown);
+    window.removeEventListener("keyup", handleKeyUp);
+});
 </script>
 
 <template>
-  <div class="app">
-    <h1 class="title">NONOCROSS</h1>
+    <div class="app">
+        <h1 class="title">NONOCROSS</h1>
 
-    <div class="top-bar">
-      <div class="timer">{{ timer.formattedTime }}</div>
-      <div v-if="game.currentStars" class="difficulty-stars">{{ game.currentStars }}</div>
-      <PuzzleSelector
-        :puzzle-bank-loaded="game.puzzleBankLoaded.value"
-        :selected-star="game.selectedStar.value"
-        :available-stars="game.availableStars.value"
-        :puzzles-for-star="game.puzzlesForStar.value"
-        :current-puzzle-id="game.currentPuzzleId.value"
-        :current-size="game.currentSize.value"
-        @change-size="game.changeSize"
-        @select-star="game.selectStar"
-        @select-bank-puzzle="game.selectBankPuzzle"
-      />
+        <div class="top-bar">
+            <div class="timer">{{ timer.formattedTime }}</div>
+            <div v-if="game.currentStars" class="difficulty-stars">
+                {{ game.currentStars }}
+            </div>
+            <PuzzleSelector
+                :puzzle-bank-loaded="game.puzzleBankLoaded.value"
+                :selected-star="game.selectedStar.value"
+                :available-stars="game.availableStars.value"
+                :puzzles-for-star="game.puzzlesForStar.value"
+                :current-puzzle-id="game.currentPuzzleId.value"
+                :current-size="game.currentSize.value"
+                @change-size="game.changeSize"
+                @select-star="game.selectStar"
+                @select-bank-puzzle="game.selectBankPuzzle"
+            />
+        </div>
+
+        <GameBoard
+            :grid="game.grid.value"
+            :current-size="game.currentSize.value"
+            :cell-size="game.cellSize.value"
+            :hint-area-size="game.hintAreaSize.value"
+            :current-col-hints="game.currentColHints.value"
+            :current-row-hints="game.currentRowHints.value"
+            :col-hint-determined="game.colHintDetermined.value"
+            :row-hint-determined="game.rowHintDetermined.value"
+            :is-complete="game.isComplete.value"
+            :is-paused="timer.isPaused.value"
+            :mode="game.mode.value"
+            @cell-mouse-down="game.cellMouseDown"
+            @cell-mouse-enter="game.cellMouseEnter"
+            @cell-touch-start="game.cellTouchStart"
+            @cell-touch-move="game.cellTouchMove"
+            @stop-dragging="game.stopDragging"
+            @toggle-mode="game.toggleMode"
+            @resume="timer.resume"
+        />
+
+        <GameControls
+            :is-paused="timer.isPaused.value"
+            :is-complete="game.isComplete.value"
+            :history-length="game.history.value.length"
+            :is-generating="game.isGenerating.value"
+            :current-solution="game.currentSolution.value"
+            :is-in-favorites="isInFavoritesComputed"
+            @toggle-pause="handleTogglePause"
+            @undo="game.undo"
+            @restart="game.restart"
+            @generate-new-puzzle="game.generateNewPuzzle"
+            @show-import="handleShowImport"
+            @export-puzzle="handleExportPuzzle"
+            @save-current-puzzle="handleSaveCurrentPuzzle"
+            @delete-from-favorites="handleDeleteFromFavorites"
+        />
+
+        <FavoritesPanel
+            :favorites="favorites.favorites.value"
+            @load-favorite="handleLoadFavorite"
+        />
+
+        <!-- 导出成功提示 -->
+        <div v-if="showExportToast" class="toast">编码已复制到剪贴板</div>
+
+        <ImportModal
+            ref="importModalRef"
+            :show="showImportDialog"
+            @close="handleCloseImport"
+            @import="handleImportPuzzle"
+        />
+
+        <!-- 完成提示 -->
+        <div v-if="game.isComplete.value" class="message">
+            用时 {{ timer.formattedTime }} 完成！
+        </div>
     </div>
-
-    <GameBoard
-      :grid="game.grid.value"
-      :current-size="game.currentSize.value"
-      :cell-size="game.cellSize.value"
-      :hint-area-size="game.hintAreaSize.value"
-      :current-col-hints="game.currentColHints.value"
-      :current-row-hints="game.currentRowHints.value"
-      :col-hint-determined="game.colHintDetermined.value"
-      :row-hint-determined="game.rowHintDetermined.value"
-      :is-complete="game.isComplete.value"
-      :is-paused="timer.isPaused.value"
-      :mode="game.mode.value"
-      @cell-mouse-down="game.cellMouseDown"
-      @cell-mouse-enter="game.cellMouseEnter"
-      @cell-touch-start="game.cellTouchStart"
-      @cell-touch-move="game.cellTouchMove"
-      @stop-dragging="game.stopDragging"
-      @toggle-mode="game.toggleMode"
-      @resume="timer.resume"
-    />
-
-    <GameControls
-      :is-paused="timer.isPaused.value"
-      :is-complete="game.isComplete.value"
-      :history-length="game.history.value.length"
-      :is-generating="game.isGenerating.value"
-      :current-solution="game.currentSolution.value"
-      :is-in-favorites="isInFavoritesComputed"
-      @toggle-pause="handleTogglePause"
-      @undo="game.undo"
-      @restart="game.restart"
-      @generate-new-puzzle="game.generateNewPuzzle"
-      @show-import="handleShowImport"
-      @export-puzzle="handleExportPuzzle"
-      @save-current-puzzle="handleSaveCurrentPuzzle"
-      @delete-from-favorites="handleDeleteFromFavorites"
-    />
-
-    <FavoritesPanel
-      :favorites="favorites.favorites.value"
-      @load-favorite="handleLoadFavorite"
-    />
-
-    <!-- 导出成功提示 -->
-    <div v-if="showExportToast" class="toast">编码已复制到剪贴板</div>
-
-    <ImportModal
-      ref="importModalRef"
-      :show="showImportDialog"
-      @close="handleCloseImport"
-      @import="handleImportPuzzle"
-    />
-
-    <!-- 完成提示 -->
-    <div v-if="game.isComplete.value" class="message">
-      用时 {{ timer.formattedTime }} 完成！
-    </div>
-  </div>
 </template>
 
 <style>
 * {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: "Outfit";
 }
 
 body {
-  background: #fff;
-  color: #000;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 20px;
+    background: #fff;
+    color: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
 }
 
 .app {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
 }
 
 .title {
-  font-size: 2rem;
-  font-weight: 700;
-  letter-spacing: 0.15em;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
 }
 
 .top-bar {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  flex-wrap: wrap;
-  justify-content: center;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .difficulty-stars {
-  font-size: 1rem;
-  font-weight: 600;
+    font-size: 1rem;
+    font-weight: 600;
 }
 
 .timer {
-  font-size: 1.25rem;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  min-width: 60px;
-  text-align: center;
+    font-size: 1.25rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    min-width: 60px;
+    text-align: center;
 }
 
 .toast {
-  padding: 8px 16px;
-  background: #000;
-  color: #fff;
-  font-size: 0.875rem;
-  font-weight: 600;
-  animation: fadeIn 0.3s ease;
+    padding: 8px 16px;
+    background: #000;
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 600;
+    animation: fadeIn 0.3s ease;
 }
 
 .message {
-  font-size: 1.25rem;
-  font-weight: 700;
-  animation: fadeIn 0.4s ease;
+    font-size: 1.25rem;
+    font-weight: 700;
+    animation: fadeIn 0.4s ease;
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @media (max-width: 600px) {
-  .top-bar {
-    gap: 12px;
-  }
+    .top-bar {
+        gap: 12px;
+    }
 
-  .timer {
-    font-size: 1.1rem;
-    min-width: 50px;
-  }
+    .timer {
+        font-size: 1.1rem;
+        min-width: 50px;
+    }
 
-  .difficulty-stars {
-    font-size: 0.875rem;
-  }
+    .difficulty-stars {
+        font-size: 0.875rem;
+    }
 
-  .pause-text {
-    font-size: 1.5rem;
-  }
+    .pause-text {
+        font-size: 1.5rem;
+    }
 }
 </style>
