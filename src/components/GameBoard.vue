@@ -141,7 +141,7 @@ function onResume() {
     @touchcancel="onStopDragging"
   >
     <!-- 左上角间隔区（模式切换） -->
-    <div class="spacer">
+    <div class="spacer" :class="{ paused: isPaused }">
       <div
         class="mode-top"
         :class="{ active: mode === 'fill' }"
@@ -159,7 +159,7 @@ function onResume() {
     </div>
 
     <!-- 列提示区 -->
-    <div class="col-hints">
+    <div class="col-hints" :class="{ paused: isPaused }">
       <div
         v-for="(hints, c) in currentColHints"
         :key="c"
@@ -180,7 +180,7 @@ function onResume() {
     </div>
 
     <!-- 行提示区 -->
-    <div class="row-hints">
+    <div class="row-hints" :class="{ paused: isPaused }">
       <div
         v-for="(hints, r) in currentRowHints"
         :key="r"
@@ -202,6 +202,7 @@ function onResume() {
     <!-- 游戏网格 -->
     <div
       class="grid"
+      :class="{ paused: isPaused }"
       @mouseup="onStopDragging"
       @mouseleave="onStopDragging"
     >
@@ -224,15 +225,15 @@ function onResume() {
           <span v-if="cell === 2" class="x-mark">✕</span>
         </div>
       </div>
-    </div>
 
-    <!-- 暂停遮罩层 -->
-    <div
-      v-if="isPaused"
-      class="pause-overlay"
-      @click="onResume"
-    >
-      <span class="pause-text">PAUSED</span>
+      <!-- 暂停遮罩层（仅覆盖 grid 区域，半透明） -->
+      <div
+        v-if="isPaused"
+        class="pause-overlay"
+        @click="onResume"
+      >
+        <span class="pause-text">PAUSED</span>
+      </div>
     </div>
   </div>
 </template>
@@ -292,6 +293,7 @@ function onResume() {
 .col-hints {
   display: flex;
   border-bottom: 2px solid #000;
+  transition: background-color 0.15s ease;
 }
 
 .col-hint {
@@ -312,6 +314,7 @@ function onResume() {
   display: flex;
   flex-direction: column;
   border-right: 2px solid #000;
+  transition: background-color 0.15s ease;
 }
 
 .row-hint {
@@ -331,6 +334,7 @@ function onResume() {
   font-size: 0.75rem;
   font-weight: 600;
   line-height: 1;
+  transition: opacity 0.15s ease;
 }
 
 .hint-determined {
@@ -340,6 +344,7 @@ function onResume() {
 .grid {
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .row {
@@ -387,12 +392,23 @@ function onResume() {
 .pause-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(200, 200, 200, 0.85);
+  background: rgba(200, 200, 200, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10;
   cursor: pointer;
+  opacity: 0;
+  animation: fadeInPause 0.15s ease forwards;
+}
+
+@keyframes fadeInPause {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .pause-text {
@@ -400,6 +416,29 @@ function onResume() {
   font-weight: 700;
   color: #000;
   letter-spacing: 0.2em;
+}
+
+/* 暂停时 hints 和 spacer 全灰遮挡 */
+.spacer.paused,
+.col-hints.paused,
+.row-hints.paused {
+  background-color: rgb(200, 200, 200) !important;
+}
+
+/* 暂停时 spacer 内部所有背景色都被覆盖 */
+.spacer.paused .mode-top,
+.spacer.paused .mode-bottom,
+.spacer.paused .mode-top.active,
+.spacer.paused .mode-bottom.active {
+  background-color: rgb(200, 200, 200) !important;
+  color: transparent !important;
+  border-color: rgb(180, 180, 180) !important;
+}
+
+/* 暂停时 hints 的文字不可见 */
+.col-hints.paused .hint-num,
+.row-hints.paused .hint-num {
+  opacity: 0;
 }
 
 .board-wrapper.complete .cell {
