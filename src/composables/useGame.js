@@ -299,9 +299,11 @@ export function useGame(timer, favorites) {
     timer.start()
     pushHistory()
 
-    // 单指为填充模式，双指为X模式
+    // 单指使用当前模式，双指使用相反模式（与鼠标左右键逻辑一致）
     const isMultiTouch = e.touches.length > 1
-    const targetMode = isMultiTouch ? MODE.X : MODE.FILL
+    const targetMode = isMultiTouch
+      ? (mode.value === MODE.FILL ? MODE.X : MODE.FILL)
+      : mode.value
     const targetVal = targetMode === MODE.FILL ? CELL_STATE.FILLED : CELL_STATE.MARKED
     const currentVal = grid.value[r][c]
 
