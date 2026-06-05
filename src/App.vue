@@ -228,7 +228,6 @@ onUnmounted(() => {
 }
 
 body {
-  font-family: "Outfit", sans-serif;
   background: #fff;
   color: #000;
   display: flex;
