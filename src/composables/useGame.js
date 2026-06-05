@@ -1,4 +1,4 @@
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import {
   getHints,
   fullSettle,
@@ -9,15 +9,28 @@ import {
   encodePuzzle,
 } from '../solver.js'
 import { generatePuzzleAsync } from '../generator.js'
+import {
+  CELL_STATE,
+  MODE,
+  MAX_HISTORY,
+  MOUSE_BUTTON,
+  GRID_SIZE,
+  CELL_SIZE,
+  HINT_AREA_SIZE,
+  STAR_RATINGS,
+} from '../constants.js'
 
-const MODE_FILL = 'fill'
-const MODE_X = 'x'
-const MAX_HISTORY = 100
-
+/**
+ * 游戏核心逻辑 Composable
+ * 管理棋盘状态、用户交互、谜题加载和导入导出
+ * @param {ReturnType<typeof import('./useTimer.js').useTimer>} timer - 计时器实例
+ * @param {ReturnType<typeof import('./useFavorites.js').useFavorites>} favorites - 收藏实例
+ * @returns {object} 游戏状态和操作方法
+ */
 export function useGame(timer, favorites) {
-  const currentSize = ref(10)
+  const currentSize = ref(GRID_SIZE.MEDIUM)
   const grid = ref([])
-  const mode = ref(MODE_FILL)
+  const mode = ref(MODE.FILL)
   const history = ref([])
   const isComplete = ref(false)
 
@@ -36,16 +49,30 @@ export function useGame(timer, favorites) {
   const puzzleBankLoaded = ref(false)
   const selectedStar = ref(1)
 
+  // 触摸状态追踪
+  const touchActiveCell = ref(null)
+
+  /**
+   * 创建空网格
+   * @param {number} size - 网格大小
+   * @returns {number[][]} 空网格
+   */
   function createEmptyGrid(size) {
-    return Array.from({ length: size }, () => Array(size).fill(0))
+    return Array.from({ length: size }, () => Array(size).fill(CELL_STATE.EMPTY))
   }
 
+  /**
+   * 将游戏网格状态转换为求解器状态
+   * @param {number} val - 单元格值
+   * @returns {number|null} 求解器状态
+   */
   function gridToSolverState(val) {
-    if (val === 1) return 1
-    if (val === 2) return 0
+    if (val === CELL_STATE.FILLED) return 1
+    if (val === CELL_STATE.MARKED) return 0
     return null
   }
 
+  // 已确定的行提示
   const rowHintDetermined = computed(() => {
     if (!currentRowHints.value) return []
     return currentRowHints.value.map((hints, r) => {
@@ -54,6 +81,7 @@ export function useGame(timer, favorites) {
     })
   })
 
+  // 已确定的列提示
   const colHintDetermined = computed(() => {
     if (!currentColHints.value) return []
     return currentColHints.value.map((hints, c) => {
@@ -62,31 +90,37 @@ export function useGame(timer, favorites) {
     })
   })
 
+  // 当前尺寸的所有谜题
   const puzzlesForSize = computed(() => {
     return puzzleBank.value.filter((p) => p.size === currentSize.value)
   })
 
+  // 当前星级筛选后的谜题
   const puzzlesForStar = computed(() => {
     return puzzlesForSize.value.filter((p) => p.stars === selectedStar.value)
   })
 
+  // 可用的星级列表
   const availableStars = computed(() => {
     const stars = new Set(puzzlesForSize.value.map((p) => p.stars))
-    return [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5].filter((s) => stars.has(s))
+    return STAR_RATINGS.filter((s) => stars.has(s))
   })
 
+  // 单元格尺寸
   const cellSize = computed(() => {
-    if (currentSize.value <= 5) return '40px'
-    if (currentSize.value <= 10) return '32px'
-    return '24px'
+    return CELL_SIZE[currentSize.value] || CELL_SIZE[GRID_SIZE.LARGE]
   })
 
+  // 提示区尺寸
   const hintAreaSize = computed(() => {
-    if (currentSize.value <= 5) return '60px'
-    if (currentSize.value <= 10) return '80px'
-    return '100px'
+    return HINT_AREA_SIZE[currentSize.value] || HINT_AREA_SIZE[GRID_SIZE.LARGE]
   })
 
+  /**
+   * 从谜题库原始行数据解析谜题对象
+   * @param {string} line - 原始行数据，格式：id:size:solution:sweeps
+   * @returns {object|null} 解析后的谜题对象
+   */
   function enrichPuzzle(line) {
     const parts = line.split(':')
     if (parts.length !== 4) return null
@@ -120,6 +154,9 @@ export function useGame(timer, favorites) {
     return { id, size, solution, rowHints, colHints, sweeps, stars, starsText }
   }
 
+  /**
+   * 加载谜题库
+   */
   async function loadPuzzleBank() {
     try {
       const res = await fetch('/puzzles.json')
@@ -132,12 +169,16 @@ export function useGame(timer, favorites) {
       puzzleBank.value = lines.map(enrichPuzzle).filter(Boolean)
       puzzleBankLoaded.value = true
     } catch (e) {
-      console.error('Failed to load puzzle bank:', e)
+      console.error('加载谜题库失败:', e)
       puzzleBank.value = []
       puzzleBankLoaded.value = true
     }
   }
 
+  /**
+   * 加载指定谜题
+   * @param {object} puzzle - 谜题对象
+   */
   function loadPuzzle(puzzle) {
     currentSolution.value = puzzle.solution
     currentRowHints.value = puzzle.rowHints
@@ -147,6 +188,9 @@ export function useGame(timer, favorites) {
     restart()
   }
 
+  /**
+   * 重新开始当前谜题
+   */
   function restart() {
     timer.stop()
     timer.reset()
@@ -155,8 +199,12 @@ export function useGame(timer, favorites) {
     isComplete.value = false
     isDragging.value = false
     dragValue.value = null
+    touchActiveCell.value = null
   }
 
+  /**
+   * 保存当前状态到历史记录
+   */
   function pushHistory() {
     history.value.push(grid.value.map((row) => [...row]))
     if (history.value.length > MAX_HISTORY) {
@@ -164,28 +212,50 @@ export function useGame(timer, favorites) {
     }
   }
 
+  /**
+   * 撤销上一步操作
+   */
   function undo() {
     if (history.value.length === 0) return
     grid.value = history.value.pop()
   }
 
+  /**
+   * 切换操作模式
+   * @param {string} newMode - 新模式
+   */
   function toggleMode(newMode) {
     mode.value = newMode
   }
 
+  /**
+   * 根据鼠标按键获取目标值
+   * @param {number} button - 鼠标按键码
+   * @returns {number} 目标单元格值
+   */
   function getTargetValue(button) {
     const effectiveMode =
-      button === 0 ? mode.value : mode.value === MODE_FILL ? MODE_X : MODE_FILL
-    return effectiveMode === MODE_FILL ? 1 : 2
+      button === MOUSE_BUTTON.LEFT
+        ? mode.value
+        : mode.value === MODE.FILL
+          ? MODE.X
+          : MODE.FILL
+    return effectiveMode === MODE.FILL ? CELL_STATE.FILLED : CELL_STATE.MARKED
   }
 
+  /**
+   * 处理单元格鼠标按下事件
+   * @param {MouseEvent} e - 鼠标事件
+   * @param {number} r - 行索引
+   * @param {number} c - 列索引
+   */
   function cellMouseDown(e, r, c) {
     if (isComplete.value) return
     if (timer.isPaused.value) {
       timer.resume()
       return
     }
-    if (e.button !== 0 && e.button !== 2) return
+    if (e.button !== MOUSE_BUTTON.LEFT && e.button !== MOUSE_BUTTON.RIGHT) return
     e.preventDefault()
     timer.start()
     pushHistory()
@@ -193,34 +263,107 @@ export function useGame(timer, favorites) {
     const targetVal = getTargetValue(e.button)
     const currentVal = grid.value[r][c]
 
-    dragValue.value = currentVal === targetVal ? 0 : targetVal
+    dragValue.value = currentVal === targetVal ? CELL_STATE.EMPTY : targetVal
     grid.value[r][c] = dragValue.value
     isDragging.value = true
     checkComplete()
   }
 
+  /**
+   * 处理单元格鼠标移入事件
+   * @param {number} r - 行索引
+   * @param {number} c - 列索引
+   */
   function cellMouseEnter(r, c) {
     if (!isDragging.value || isComplete.value) return
-    if (dragValue.value === 0) {
-      grid.value[r][c] = 0
-    } else if (grid.value[r][c] === 0) {
+    if (dragValue.value === CELL_STATE.EMPTY) {
+      grid.value[r][c] = CELL_STATE.EMPTY
+    } else if (grid.value[r][c] === CELL_STATE.EMPTY) {
       grid.value[r][c] = dragValue.value
     }
   }
 
+  /**
+   * 处理单元格触摸开始事件
+   * @param {TouchEvent} e - 触摸事件
+   * @param {number} r - 行索引
+   * @param {number} c - 列索引
+   */
+  function cellTouchStart(e, r, c) {
+    if (isComplete.value) return
+    if (timer.isPaused.value) {
+      timer.resume()
+      return
+    }
+    e.preventDefault()
+    timer.start()
+    pushHistory()
+
+    // 单指为填充模式，双指为X模式
+    const isMultiTouch = e.touches.length > 1
+    const targetMode = isMultiTouch ? MODE.X : MODE.FILL
+    const targetVal = targetMode === MODE.FILL ? CELL_STATE.FILLED : CELL_STATE.MARKED
+    const currentVal = grid.value[r][c]
+
+    dragValue.value = currentVal === targetVal ? CELL_STATE.EMPTY : targetVal
+    grid.value[r][c] = dragValue.value
+    isDragging.value = true
+    touchActiveCell.value = { r, c }
+    checkComplete()
+  }
+
+  /**
+   * 处理触摸移动事件
+   * @param {TouchEvent} e - 触摸事件
+   */
+  function cellTouchMove(e) {
+    if (!isDragging.value || isComplete.value) return
+    e.preventDefault()
+
+    const touch = e.touches[0]
+    if (!touch) return
+
+    const element = document.elementFromPoint(touch.clientX, touch.clientY)
+    if (!element) return
+
+    const cell = element.closest('[data-cell]')
+    if (!cell) return
+
+    const r = parseInt(cell.dataset.row, 10)
+    const c = parseInt(cell.dataset.col, 10)
+
+    if (isNaN(r) || isNaN(c)) return
+    if (touchActiveCell.value?.r === r && touchActiveCell.value?.c === c) return
+
+    touchActiveCell.value = { r, c }
+
+    if (dragValue.value === CELL_STATE.EMPTY) {
+      grid.value[r][c] = CELL_STATE.EMPTY
+    } else if (grid.value[r][c] === CELL_STATE.EMPTY) {
+      grid.value[r][c] = dragValue.value
+    }
+  }
+
+  /**
+   * 停止拖拽操作
+   */
   function stopDragging() {
     isDragging.value = false
     dragValue.value = null
+    touchActiveCell.value = null
   }
 
+  /**
+   * 检查谜题是否完成
+   */
   function checkComplete() {
     if (!currentSolution.value) return
     for (let r = 0; r < currentSize.value; r++) {
       for (let c = 0; c < currentSize.value; c++) {
         const expected = currentSolution.value[r][c]
         const actual = grid.value[r][c]
-        if (expected === 1 && actual !== 1) return
-        if (expected === 0 && actual === 1) return
+        if (expected === 1 && actual !== CELL_STATE.FILLED) return
+        if (expected === 0 && actual === CELL_STATE.FILLED) return
       }
     }
     isComplete.value = true
@@ -228,6 +371,9 @@ export function useGame(timer, favorites) {
     favorites.markCompleted(currentSolution.value, timer.seconds.value)
   }
 
+  /**
+   * 生成新谜题
+   */
   async function generateNewPuzzle() {
     if (isGenerating.value) return
     isGenerating.value = true
@@ -236,20 +382,28 @@ export function useGame(timer, favorites) {
       const puzzle = await generatePuzzleAsync(currentSize.value)
       loadPuzzle(puzzle)
     } catch (e) {
-      console.error('Failed to generate puzzle:', e)
+      console.error('生成谜题失败:', e)
     } finally {
       isGenerating.value = false
     }
   }
 
+  /**
+   * 选择谜题库中的谜题
+   * @param {object} puzzle - 谜题对象
+   */
   function selectBankPuzzle(puzzle) {
     loadPuzzle(puzzle)
   }
 
+  /**
+   * 切换网格尺寸
+   * @param {number} size - 新尺寸
+   */
   function changeSize(size) {
     currentSize.value = size
     restart()
-    // Auto-select first available star for this size
+    // 自动选择当前尺寸的第一个可用星级
     const stars = [...new Set(puzzlesForSize.value.map((p) => p.stars))]
     if (stars.length > 0) {
       selectedStar.value = Math.min(...stars)
@@ -264,6 +418,10 @@ export function useGame(timer, favorites) {
     }
   }
 
+  /**
+   * 选择星级难度
+   * @param {number} star - 星级
+   */
   function selectStar(star) {
     selectedStar.value = star
     const puzzles = puzzlesForStar.value
@@ -272,10 +430,15 @@ export function useGame(timer, favorites) {
     }
   }
 
+  /**
+   * 导入谜题
+   * @param {string} code - 谜题编码
+   * @returns {{success: boolean, error?: string}} 导入结果
+   */
   function importPuzzle(code) {
     const result = decodePuzzle(code.trim())
     if (!result) {
-      return { success: false, error: 'Invalid code format' }
+      return { success: false, error: '无效的编码格式' }
     }
 
     const { size, solution } = result
@@ -286,7 +449,7 @@ export function useGame(timer, favorites) {
 
     const { solved, sweeps } = fullSettle(rowHints, colHints)
     if (!solved) {
-      return { success: false, error: 'This puzzle is not logically solvable' }
+      return { success: false, error: '该谜题无法通过逻辑推导求解' }
     }
 
     const stars = sweepsToStars(sweeps, size)
@@ -306,12 +469,20 @@ export function useGame(timer, favorites) {
     return { success: true }
   }
 
+  /**
+   * 导出当前谜题
+   * @returns {string|null} 谜题编码
+   */
   function exportPuzzle() {
     if (!currentSolution.value) return null
     const code = encodePuzzle(currentSolution.value)
     return code
   }
 
+  /**
+   * 处理键盘按下事件
+   * @param {KeyboardEvent} e - 键盘事件
+   */
   function onKeyDown(e) {
     if (e.key === 'Control' || e.key === 'Meta') {
       if (!ctrlDown.value) {
@@ -320,20 +491,24 @@ export function useGame(timer, favorites) {
     }
   }
 
+  /**
+   * 处理键盘释放事件
+   * @param {KeyboardEvent} e - 键盘事件
+   */
   function onKeyUp(e) {
     if (e.key === 'Control' || e.key === 'Meta') {
       if (ctrlDown.value) {
         ctrlDown.value = false
-        mode.value = mode.value === MODE_FILL ? MODE_X : MODE_FILL
+        mode.value = mode.value === MODE.FILL ? MODE.X : MODE.FILL
       }
     }
   }
 
-  // Initialize
+  // 初始化
   grid.value = createEmptyGrid(currentSize.value)
 
   return {
-    // State
+    // 状态
     currentSize,
     grid,
     mode,
@@ -351,7 +526,7 @@ export function useGame(timer, favorites) {
     puzzleBankLoaded,
     selectedStar,
 
-    // Computed
+    // 计算属性
     puzzlesForSize,
     puzzlesForStar,
     availableStars,
@@ -360,7 +535,7 @@ export function useGame(timer, favorites) {
     cellSize,
     hintAreaSize,
 
-    // Actions
+    // 操作方法
     loadPuzzleBank,
     loadPuzzle,
     restart,
@@ -368,6 +543,8 @@ export function useGame(timer, favorites) {
     toggleMode,
     cellMouseDown,
     cellMouseEnter,
+    cellTouchStart,
+    cellTouchMove,
     stopDragging,
     checkComplete,
     generateNewPuzzle,

@@ -16,37 +16,31 @@ const props = defineProps({
 const emit = defineEmits([
   'cellMouseDown',
   'cellMouseEnter',
+  'cellTouchStart',
+  'cellTouchMove',
   'stopDragging',
   'toggleMode',
   'resume',
 ])
 
-function onCellMouseDown(e, r, c) {
-  emit('cellMouseDown', e, r, c)
-}
-
-function onCellMouseEnter(r, c) {
-  emit('cellMouseEnter', r, c)
-}
-
-function onStopDragging() {
-  emit('stopDragging')
-}
-
-function onToggleMode(newMode) {
-  emit('toggleMode', newMode)
-}
-
-function onResume() {
-  emit('resume')
-}
-
+/**
+ * 判断单元格是否需要加粗边框（每5格一组）
+ * @param {number} r - 行索引
+ * @param {number} c - 列索引
+ * @returns {{thickR: boolean, thickC: boolean}} 边框加粗标记
+ */
 function isThickBorder(r, c) {
   const thickR = (r + 1) % 5 === 0 && r + 1 < props.currentSize
   const thickC = (c + 1) % 5 === 0 && c + 1 < props.currentSize
   return { thickR, thickC }
 }
 
+/**
+ * 获取单元格样式
+ * @param {number} r - 行索引
+ * @param {number} c - 列索引
+ * @returns {object} CSS 样式对象
+ */
 function cellStyle(r, c) {
   const { thickR, thickC } = isThickBorder(r, c)
   return {
@@ -57,6 +51,10 @@ function cellStyle(r, c) {
   }
 }
 
+/**
+ * 获取左上角间隔区样式
+ * @returns {object} CSS 样式对象
+ */
 function spacerStyle() {
   return {
     width: props.hintAreaSize,
@@ -64,6 +62,10 @@ function spacerStyle() {
   }
 }
 
+/**
+ * 获取列提示区样式
+ * @returns {object} CSS 样式对象
+ */
 function colHintStyle() {
   return {
     width: props.cellSize,
@@ -71,17 +73,85 @@ function colHintStyle() {
   }
 }
 
+/**
+ * 获取行提示区样式
+ * @returns {object} CSS 样式对象
+ */
 function rowHintStyle() {
   return {
     width: props.hintAreaSize,
     height: props.cellSize,
   }
 }
+
+/**
+ * 处理单元格鼠标按下
+ * @param {MouseEvent} e - 鼠标事件
+ * @param {number} r - 行索引
+ * @param {number} c - 列索引
+ */
+function onCellMouseDown(e, r, c) {
+  emit('cellMouseDown', e, r, c)
+}
+
+/**
+ * 处理单元格鼠标移入
+ * @param {number} r - 行索引
+ * @param {number} c - 列索引
+ */
+function onCellMouseEnter(r, c) {
+  emit('cellMouseEnter', r, c)
+}
+
+/**
+ * 处理单元格触摸开始
+ * @param {TouchEvent} e - 触摸事件
+ * @param {number} r - 行索引
+ * @param {number} c - 列索引
+ */
+function onCellTouchStart(e, r, c) {
+  emit('cellTouchStart', e, r, c)
+}
+
+/**
+ * 处理触摸移动
+ * @param {TouchEvent} e - 触摸事件
+ */
+function onCellTouchMove(e) {
+  emit('cellTouchMove', e)
+}
+
+/**
+ * 停止拖拽
+ */
+function onStopDragging() {
+  emit('stopDragging')
+}
+
+/**
+ * 切换操作模式
+ * @param {string} newMode - 新模式
+ */
+function onToggleMode(newMode) {
+  emit('toggleMode', newMode)
+}
+
+/**
+ * 恢复计时
+ */
+function onResume() {
+  emit('resume')
+}
 </script>
 
 <template>
-  <div class="board-wrapper" :class="{ complete: isComplete }">
-    <!-- Top-left spacer -->
+  <div
+    class="board-wrapper"
+    :class="{ complete: isComplete }"
+    @touchend="onStopDragging"
+    @touchcancel="onStopDragging"
+  >
+    <!-- 左上角间隔区（模式切换） -->
     <div class="spacer" :style="spacerStyle()">
       <div
         class="mode-top"
@@ -99,7 +169,7 @@ function rowHintStyle() {
       </div>
     </div>
 
-    <!-- Column hints -->
+    <!-- 列提示区 -->
     <div class="col-hints">
       <div
         v-for="(hints, c) in currentColHints"
@@ -120,7 +190,7 @@ function rowHintStyle() {
       </div>
     </div>
 
-    <!-- Row hints -->
+    <!-- 行提示区 -->
     <div class="row-hints">
       <div
         v-for="(hints, r) in currentRowHints"
@@ -140,7 +210,7 @@ function rowHintStyle() {
       </div>
     </div>
 
-    <!-- Grid -->
+    <!-- 游戏网格 -->
     <div
       class="grid"
       @mouseup="onStopDragging"
@@ -153,8 +223,13 @@ function rowHintStyle() {
           class="cell"
           :class="{ filled: cell === 1, x: cell === 2 }"
           :style="cellStyle(r, c)"
+          :data-cell="true"
+          :data-row="r"
+          :data-col="c"
           @mousedown.prevent="onCellMouseDown($event, r, c)"
           @mouseenter="onCellMouseEnter(r, c)"
+          @touchstart.prevent="onCellTouchStart($event, r, c)"
+          @touchmove.prevent="onCellTouchMove($event)"
           @contextmenu.prevent
         >
           <span v-if="cell === 2" class="x-mark">✕</span>
@@ -162,7 +237,7 @@ function rowHintStyle() {
       </div>
     </div>
 
-    <!-- Pause overlay -->
+    <!-- 暂停遮罩层 -->
     <div
       v-if="isPaused"
       class="pause-overlay"
@@ -181,6 +256,7 @@ function rowHintStyle() {
   grid-template-rows: auto 1fr;
   border: 2px solid #000;
   user-select: none;
+  touch-action: none; /* 防止触摸时页面滚动 */
 }
 
 .spacer {
@@ -289,6 +365,8 @@ function rowHintStyle() {
   align-items: center;
   cursor: pointer;
   transition: background 0.1s;
+  /* 触摸设备上的优化 */
+  -webkit-tap-highlight-color: transparent;
 }
 
 .cell:last-child {
@@ -337,5 +415,11 @@ function rowHintStyle() {
 
 .board-wrapper.complete .cell {
   cursor: default;
+}
+
+@media (max-width: 600px) {
+  .pause-text {
+    font-size: 1.5rem;
+  }
 }
 </style>

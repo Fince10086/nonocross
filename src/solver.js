@@ -1,8 +1,22 @@
 /**
- * Shared Nonogram Solver Logic
- * Works in both Browser (Worker) and Node.js environments
+ * Nonogram 求解器核心逻辑
+ * 支持浏览器（Worker）和 Node.js 环境
  */
 
+/**
+ * @typedef {number[][]} Grid - 二维网格，值为 0 或 1
+ * @typedef {number[]} Line - 一维数组，值为 0 或 1
+ * @typedef {number[]} Hints - 提示数字数组，如 [2, 1, 3]
+ * @typedef {number|null[]} KnownLine - 已知状态行，null 表示未知
+ */
+
+/**
+ * 从一行网格中提取提示数字
+ * @param {Line} line - 一行网格数据
+ * @returns {Hints} 提示数字数组
+ * @example
+ * getHints([1,1,0,1,0,1,1,1]) // [2, 1, 3]
+ */
 export function getHints(line) {
   const hints = []
   let count = 0
@@ -21,6 +35,12 @@ export function getHints(line) {
   return hints
 }
 
+/**
+ * 生成一行所有可能的合法排列
+ * @param {Hints} hints - 提示数字
+ * @param {number} size - 行长度
+ * @returns {Line[]} 所有可能的排列
+ */
 export function getLinePossibilities(hints, size) {
   const results = []
 
@@ -53,6 +73,12 @@ export function getLinePossibilities(hints, size) {
   return results
 }
 
+/**
+ * 根据已知状态推导一行中可确定的格子
+ * @param {KnownLine} known - 已知状态行
+ * @param {Hints} hints - 提示数字
+ * @returns {KnownLine} 推导后的状态行
+ */
 function determineLine(known, hints) {
   const possibilities = getLinePossibilities(hints, known.length)
 
@@ -76,6 +102,14 @@ function determineLine(known, hints) {
   return result
 }
 
+/**
+ * 完整求解一个谜题
+ * 通过交替扫描行和列，逐步填充可确定的格子
+ * @param {Hints[]} rowHints - 所有行的提示
+ * @param {Hints[]} colHints - 所有列的提示
+ * @param {KnownLine[]} [knownGrid] - 可选的初始已知网格
+ * @returns {{grid: KnownLine[], solved: boolean, sweeps: number}} 求解结果
+ */
 export function fullSettle(rowHints, colHints, knownGrid = null) {
   const rows = rowHints.length
   const cols = colHints.length
@@ -87,7 +121,7 @@ export function fullSettle(rowHints, colHints, knownGrid = null) {
   let changed = true
   while (changed) {
     changed = false
-    // Horizontal sweep (1 round)
+    // 水平扫描（一轮）
     for (let r = 0; r < rows; r++) {
       const line = grid[r]
       const determined = determineLine(line, rowHints[r])
@@ -102,7 +136,7 @@ export function fullSettle(rowHints, colHints, knownGrid = null) {
     if (!changed) break
 
     changed = false
-    // Vertical sweep (1 round)
+    // 垂直扫描（一轮）
     for (let c = 0; c < cols; c++) {
       const line = []
       for (let r = 0; r < rows; r++) line.push(grid[r][c])
@@ -130,6 +164,13 @@ export function fullSettle(rowHints, colHints, knownGrid = null) {
   return { grid, solved, sweeps }
 }
 
+/**
+ * 计算谜题的解的数量（用于验证唯一性）
+ * 当解数量达到 2 时提前终止
+ * @param {Hints[]} rowHints - 所有行的提示
+ * @param {Hints[]} colHints - 所有列的提示
+ * @returns {number} 解的数量（最多返回 2）
+ */
 export function countSolutions(rowHints, colHints) {
   const rows = rowHints.length
   const cols = colHints.length
@@ -198,6 +239,7 @@ export function countSolutions(rowHints, colHints) {
       }
     }
 
+    // 恢复原始行状态，避免影响其他分支
     grid[r] = originalRow
   }
 
@@ -206,6 +248,12 @@ export function countSolutions(rowHints, colHints) {
   return count
 }
 
+/**
+ * 生成随机网格
+ * 填充密度在 30%-50% 之间
+ * @param {number} size - 网格大小
+ * @returns {Grid} 随机网格
+ */
 export function randomGrid(size) {
   const total = size * size
   const minCells = Math.ceil(total * 0.30)
@@ -220,6 +268,7 @@ export function randomGrid(size) {
     }
   }
 
+  // Fisher-Yates 洗牌算法
   for (let i = positions.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
     ;[positions[i], positions[j]] = [positions[j], positions[i]]
@@ -233,12 +282,19 @@ export function randomGrid(size) {
   return grid
 }
 
+// 难度星级阈值映射
 const starThresholds = {
   5:  [3, 4, 5, 6, 7, 8, 9, 10],
   10: [7, 9, 11, 13, 15, 17, 20, 24],
   15: [11, 14, 17, 19, 22, 25, 28, 32]
 }
 
+/**
+ * 根据求解扫描次数转换为星级难度
+ * @param {number} sweeps - 求解扫描次数
+ * @param {number} size - 网格大小
+ * @returns {number} 星级（1-5，支持半星）
+ */
 export function sweepsToStars(sweeps, size) {
   const t = starThresholds[size]
   if (sweeps <= t[0]) return 1
@@ -252,10 +308,14 @@ export function sweepsToStars(sweeps, size) {
   return 5
 }
 
+/**
+ * 获取已确定的提示索引
+ * 用于 UI 中灰显已完成的提示数字
+ * @param {KnownLine} state - 当前行状态（null=空, 1=已填, 0=X标记）
+ * @param {Hints} hints - 提示数字
+ * @returns {Set<number>} 已确定提示的索引集合
+ */
 export function getDeterminedHints(state, hints) {
-  // state: 每格状态，null=空, 1=已填, 0=x/标记
-  // hints: 如 [1, 2, 2]
-  // 返回 Set<number>，已确定提示的索引（0-based）
   const size = state.length
 
   // 全空行特殊情况
@@ -322,6 +382,13 @@ export function getDeterminedHints(state, hints) {
   return determined
 }
 
+/**
+ * 将星级评分格式化为 Unicode 星号字符串
+ * @param {number} rating - 星级评分（1-5）
+ * @returns {string} 格式化后的星号字符串
+ * @example
+ * formatStars(2.5) // "★★½☆☆"
+ */
 export function formatStars(rating) {
   const full = Math.floor(rating)
   const half = rating % 1 === 0.5
@@ -329,6 +396,12 @@ export function formatStars(rating) {
   return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(empty)
 }
 
+/**
+ * 生成一个逻辑可解且解唯一的谜题
+ * @param {number} size - 网格大小
+ * @param {number} [maxAttempts=50] - 最大尝试次数
+ * @returns {object} 生成的谜题对象
+ */
 export function generatePuzzle(size, maxAttempts = 50) {
   let solution = randomGrid(size)
   let rowHints = solution.map(row => getHints(row))
@@ -339,11 +412,11 @@ export function generatePuzzle(size, maxAttempts = 50) {
   let attempts = 0
 
   while (attempts < maxAttempts) {
-    // Check logic solvability with FullSettle
+    // 检查逻辑可解性
     const { solved, sweeps } = fullSettle(rowHints, colHints)
 
     if (solved) {
-      // Verify uniqueness
+      // 验证唯一性
       const solCount = countSolutions(rowHints, colHints)
       if (solCount === 1) {
         const stars = sweepsToStars(sweeps, size)
@@ -351,7 +424,7 @@ export function generatePuzzle(size, maxAttempts = 50) {
       }
     }
 
-    // Adapt: flip a random cell to improve solvability
+    // 自适应：翻转随机格子以提高可解性
     const { grid: settled } = fullSettle(rowHints, colHints)
     const unsolved = []
     for (let r = 0; r < size; r++) {
@@ -379,12 +452,17 @@ export function generatePuzzle(size, maxAttempts = 50) {
     attempts++
   }
 
-  // Fallback
+  // 回退：返回最后一次尝试的结果
   const { sweeps } = fullSettle(rowHints, colHints)
   const stars = sweepsToStars(sweeps, size)
   return { solution, rowHints, colHints, sweeps, stars, starsText: formatStars(stars) }
 }
 
+/**
+ * 将谜题网格编码为紧凑字符串
+ * @param {Grid} solution - 谜题解网格
+ * @returns {string} 编码后的字符串，格式为 "size:base64"
+ */
 export function encodePuzzle(solution) {
   const size = solution.length
   const bits = []
@@ -394,7 +472,7 @@ export function encodePuzzle(solution) {
     }
   }
 
-  // Pad to multiple of 6
+  // 填充至 6 的倍数
   while (bits.length % 6 !== 0) {
     bits.push(0)
   }
@@ -412,6 +490,11 @@ export function encodePuzzle(solution) {
   return `${size}:${chars.join('')}`
 }
 
+/**
+ * 从编码字符串解码谜题
+ * @param {string} code - 编码字符串
+ * @returns {{size: number, solution: Grid}|null} 解码结果，失败返回 null
+ */
 export function decodePuzzle(code) {
   const parts = code.split(':')
   if (parts.length !== 2) return null

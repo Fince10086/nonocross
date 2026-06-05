@@ -43,6 +43,9 @@ function handleImportPuzzle(code) {
   }
 }
 
+/**
+ * 导出当前谜题到剪贴板
+ */
 async function handleExportPuzzle() {
   const code = game.exportPuzzle()
   if (!code) return
@@ -53,8 +56,8 @@ async function handleExportPuzzle() {
       showExportToast.value = false
     }, 2000)
   } catch (e) {
-    console.error('Failed to copy to clipboard:', e)
-    alert('Failed to copy code. Code: ' + code)
+    console.error('复制到剪贴板失败:', e)
+    alert('复制失败，请手动复制以下编码:\n' + code)
   }
 }
 
@@ -171,6 +174,8 @@ onUnmounted(() => {
       :mode="game.mode.value"
       @cell-mouse-down="game.cellMouseDown"
       @cell-mouse-enter="game.cellMouseEnter"
+      @cell-touch-start="game.cellTouchStart"
+      @cell-touch-move="game.cellTouchMove"
       @stop-dragging="game.stopDragging"
       @toggle-mode="game.toggleMode"
       @resume="timer.resume"
@@ -198,7 +203,8 @@ onUnmounted(() => {
       @load-favorite="handleLoadFavorite"
     />
 
-    <div v-if="showExportToast" class="toast">Code copied to clipboard</div>
+    <!-- 导出成功提示 -->
+    <div v-if="showExportToast" class="toast">编码已复制到剪贴板</div>
 
     <ImportModal
       ref="importModalRef"
@@ -207,8 +213,9 @@ onUnmounted(() => {
       @import="handleImportPuzzle"
     />
 
+    <!-- 完成提示 -->
     <div v-if="game.isComplete.value" class="message">
-      Completed in {{ timer.formattedTime }}!
+      用时 {{ timer.formattedTime }} 完成！
     </div>
   </div>
 </template>

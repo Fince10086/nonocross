@@ -1,23 +1,35 @@
 import { ref, computed, onUnmounted } from 'vue'
 
+/**
+ * 格式化秒数为 MM:SS 字符串
+ * @param {number} totalSeconds - 总秒数
+ * @returns {string} 格式化后的时间字符串
+ */
+function formatTime(totalSeconds) {
+  const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0')
+  const s = (totalSeconds % 60).toString().padStart(2, '0')
+  return `${m}:${s}`
+}
+
+/**
+ * 计时器 Composable
+ * 提供游戏计时功能，支持开始、暂停、恢复、停止和重置
+ * @returns {object} 计时器状态和操作方法
+ */
 export function useTimer() {
   const seconds = ref(0)
   const isRunning = ref(false)
   const isPaused = ref(false)
   let timerInterval = null
 
-  const formattedTime = computed(() => {
-    const m = Math.floor(seconds.value / 60).toString().padStart(2, '0')
-    const s = (seconds.value % 60).toString().padStart(2, '0')
-    return `${m}:${s}`
-  })
+  /**
+   * 格式化后的时间显示
+   */
+  const formattedTime = computed(() => formatTime(seconds.value))
 
-  function formatTimeFromSeconds(totalSeconds) {
-    const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0')
-    const s = (totalSeconds % 60).toString().padStart(2, '0')
-    return `${m}:${s}`
-  }
-
+  /**
+   * 开始计时
+   */
   function start() {
     if (!isRunning.value && !isPaused.value) {
       isRunning.value = true
@@ -27,6 +39,9 @@ export function useTimer() {
     }
   }
 
+  /**
+   * 停止计时
+   */
   function stop() {
     if (timerInterval) {
       clearInterval(timerInterval)
@@ -35,18 +50,27 @@ export function useTimer() {
     isRunning.value = false
   }
 
+  /**
+   * 暂停计时
+   */
   function pause() {
     if (!isRunning.value) return
     isPaused.value = true
     stop()
   }
 
+  /**
+   * 恢复计时
+   */
   function resume() {
     if (!isPaused.value) return
     isPaused.value = false
     start()
   }
 
+  /**
+   * 切换暂停/恢复状态
+   */
   function togglePause() {
     if (isPaused.value) {
       resume()
@@ -55,16 +79,24 @@ export function useTimer() {
     }
   }
 
+  /**
+   * 重置计时器
+   */
   function reset() {
     stop()
     seconds.value = 0
     isPaused.value = false
   }
 
+  /**
+   * 设置当前秒数
+   * @param {number} value - 秒数
+   */
   function setTime(value) {
     seconds.value = value
   }
 
+  // 组件卸载时清理定时器
   onUnmounted(() => {
     stop()
   })
@@ -74,7 +106,7 @@ export function useTimer() {
     isRunning: readonly(isRunning),
     isPaused: readonly(isPaused),
     formattedTime,
-    formatTimeFromSeconds,
+    formatTimeFromSeconds: formatTime,
     start,
     stop,
     pause,
@@ -85,6 +117,11 @@ export function useTimer() {
   }
 }
 
+/**
+ * 创建只读的 computed ref
+ * @param {import('vue').Ref} refValue
+ * @returns {import('vue').ComputedRef}
+ */
 function readonly(refValue) {
   return computed(() => refValue.value)
 }
