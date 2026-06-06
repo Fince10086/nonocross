@@ -12,6 +12,7 @@ const props = defineProps({
   isComplete: { type: Boolean, default: false },
   isPaused: { type: Boolean, default: false },
   mode: { type: String, required: true },
+  selectedCell: { type: Object, default: null },
 })
 
 const emit = defineEmits([
@@ -371,7 +372,11 @@ const boardVars = computed(() => {
           v-for="(cell, c) in row"
           :key="c"
           class="cell"
-          :class="{ filled: cell === 1, x: cell === 2 }"
+          :class="{
+            filled: cell === 1,
+            x: cell === 2,
+            selected: selectedCell?.r === r && selectedCell?.c === c,
+          }"
           :style="cellStyle(r, c)"
           :data-cell="true"
           :data-row="r"
@@ -542,6 +547,17 @@ const boardVars = computed(() => {
 
 .cell.x {
   background: #fff;
+}
+
+.cell.selected {
+  outline: 2px solid #1976d2;
+  outline-offset: -2px;
+  position: relative;
+  z-index: 1;
+}
+
+.cell.selected.filled {
+  outline-color: #42a5f5;
 }
 
 .x-mark {

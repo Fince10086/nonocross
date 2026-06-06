@@ -15,7 +15,7 @@ export default defineConfig({
     // PWA 支持
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icons.svg', 'puzzles.json'],
+      includeAssets: ['favicon.svg', 'icons.svg', 'puzzles-5.json', 'puzzles-10.json', 'puzzles-15.json'],
       manifest: {
         name: 'Nonocross',
         short_name: 'Nonocross',

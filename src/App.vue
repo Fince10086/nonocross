@@ -84,7 +84,7 @@ function handleLoadFavorite(fav) {
 }
 
 function handleKeyDown(e) {
-    game.onKeyDown(e);
+    game.handleKeyDown(e, timer.togglePause);
 }
 
 function handleKeyUp(e) {
@@ -145,6 +145,7 @@ onUnmounted(() => {
             :is-complete="game.isComplete.value"
             :is-paused="timer.isPaused.value"
             :mode="game.mode.value"
+            :selected-cell="game.selectedCell.value"
             @cell-mouse-down="game.cellMouseDown"
             @cell-mouse-enter="game.cellMouseEnter"
             @cell-touch-start="game.cellTouchStart"

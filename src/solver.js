@@ -165,90 +165,6 @@ export function fullSettle(rowHints, colHints, knownGrid = null) {
 }
 
 /**
- * 计算谜题的解的数量（用于验证唯一性）
- * 当解数量达到 2 时提前终止
- * @param {Hints[]} rowHints - 所有行的提示
- * @param {Hints[]} colHints - 所有列的提示
- * @returns {number} 解的数量（最多返回 2）
- */
-export function countSolutions(rowHints, colHints) {
-  const rows = rowHints.length
-  const cols = colHints.length
-  const rowPossibilities = rowHints.map(h => getLinePossibilities(h, cols))
-  let count = 0
-
-  function isPartialColValid(grid, upToRow, colIndex) {
-    const col = []
-    for (let i = 0; i <= upToRow; i++) col.push(grid[i][colIndex])
-
-    let hintIdx = 0
-    let currentCount = 0
-    let inBlock = false
-
-    for (let i = 0; i < col.length; i++) {
-      if (col[i] === 1) {
-        if (!inBlock) {
-          inBlock = true
-          currentCount = 1
-        } else {
-          currentCount++
-        }
-      } else {
-        if (inBlock) {
-          if (hintIdx >= colHints[colIndex].length || currentCount !== colHints[colIndex][hintIdx]) {
-            return false
-          }
-          hintIdx++
-          inBlock = false
-          currentCount = 0
-        }
-      }
-    }
-
-    if (inBlock) {
-      if (hintIdx >= colHints[colIndex].length || currentCount > colHints[colIndex][hintIdx]) {
-        return false
-      }
-    }
-
-    return true
-  }
-
-  function backtrack(r, grid) {
-    if (count >= 2) return
-    if (r === rows) {
-      count++
-      return
-    }
-
-    const originalRow = grid[r]
-
-    for (const poss of rowPossibilities[r]) {
-      grid[r] = poss
-
-      let valid = true
-      for (let c = 0; c < cols; c++) {
-        if (!isPartialColValid(grid, r, c)) {
-          valid = false
-          break
-        }
-      }
-
-      if (valid) {
-        backtrack(r + 1, grid)
-      }
-    }
-
-    // 恢复原始行状态，避免影响其他分支
-    grid[r] = originalRow
-  }
-
-  const grid = Array.from({ length: rows }, () => Array(cols).fill(0))
-  backtrack(0, grid)
-  return count
-}
-
-/**
  * 生成随机网格
  * 填充密度在 30%-50% 之间
  * @param {number} size - 网格大小
@@ -330,12 +246,9 @@ export function generatePuzzle(size, maxAttempts = 50) {
     const { solved, sweeps } = fullSettle(rowHints, colHints)
 
     if (solved) {
-      // 验证唯一性
-      const solCount = countSolutions(rowHints, colHints)
-      if (solCount === 1) {
-        const stars = sweepsToStars(sweeps, size)
-        return { solution, rowHints, colHints, sweeps, stars, starsText: formatStars(stars) }
-      }
+      // fullSettle 已完全解出，说明解唯一，直接返回
+      const stars = sweepsToStars(sweeps, size)
+      return { solution, rowHints, colHints, sweeps, stars, starsText: formatStars(stars) }
     }
 
     // 自适应：翻转随机格子以提高可解性

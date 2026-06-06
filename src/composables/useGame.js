@@ -53,6 +53,9 @@ export function useGame(timer, favorites) {
   // 触摸状态追踪
   const touchActiveCell = ref(null)
 
+  // 键盘选中格子
+  const selectedCell = ref(null)
+
   /**
    * 创建空网格
    * @param {number} size - 网格大小
@@ -164,18 +167,29 @@ export function useGame(timer, favorites) {
   }
 
   /**
-   * 加载谜题库
+   * 加载谜题库（按大小分三个文件）
    */
   async function loadPuzzleBank() {
     try {
-      const res = await fetch('/puzzles.json')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const text = await res.text()
-      const lines = text
-        .trim()
-        .split('\n')
-        .filter((line) => line.trim())
-      puzzleBank.value = lines.map(enrichPuzzle).filter(Boolean)
+      const files = ['/puzzles-5.json', '/puzzles-10.json', '/puzzles-15.json']
+      const results = await Promise.all(
+        files.map(async (file) => {
+          const res = await fetch(file)
+          if (!res.ok) throw new Error(`HTTP ${res.status} for ${file}`)
+          return res.text()
+        }),
+      )
+
+      const allLines = []
+      for (const text of results) {
+        const lines = text
+          .trim()
+          .split('\n')
+          .filter((line) => line.trim())
+        allLines.push(...lines)
+      }
+
+      puzzleBank.value = allLines.map(enrichPuzzle).filter(Boolean)
       puzzleBankLoaded.value = true
     } catch (e) {
       console.error('加载谜题库失败:', e)
@@ -221,6 +235,7 @@ export function useGame(timer, favorites) {
     isDragging.value = false
     dragValue.value = null
     touchActiveCell.value = null
+    selectedCell.value = null
     initHintDetermined()
   }
 
@@ -558,14 +573,132 @@ export function useGame(timer, favorites) {
   }
 
   /**
-   * 处理键盘按下事件
-   * @param {KeyboardEvent} e - 键盘事件
+   * 移动键盘选中格子
+   * @param {string} direction - up/down/left/right
    */
-  function onKeyDown(e) {
-    if (e.key === 'Control' || e.key === 'Meta') {
-      if (!ctrlDown.value) {
-        ctrlDown.value = true
-      }
+  function moveSelectedCell(direction) {
+    if (isComplete.value) return
+    if (!selectedCell.value) {
+      selectedCell.value = { r: 0, c: 0 }
+      return
+    }
+    const size = currentSize.value
+    let { r, c } = selectedCell.value
+    switch (direction) {
+      case 'up': r = (r - 1 + size) % size; break
+      case 'down': r = (r + 1) % size; break
+      case 'left': c = (c - 1 + size) % size; break
+      case 'right': c = (c + 1) % size; break
+    }
+    selectedCell.value = { r, c }
+  }
+
+  /**
+   * 在选中格子上执行操作
+   * @param {number} targetState - 目标状态
+   * @returns {boolean} 是否成功执行
+   */
+  function actOnSelectedCell(targetState) {
+    if (isComplete.value || !selectedCell.value) return false
+    const { r, c } = selectedCell.value
+    const currentVal = grid.value[r][c]
+    // 如果已经是目标状态则清空，否则设置为目标状态
+    const newVal = currentVal === targetState ? CELL_STATE.EMPTY : targetState
+    pushHistory()
+    grid.value[r][c] = newVal
+    updateHintDetermined(r, c)
+    checkComplete()
+    timer.start()
+    return true
+  }
+
+  /**
+   * 统一处理键盘事件
+   * @param {KeyboardEvent} e - 键盘事件
+   * @param {Function} togglePause - 切换暂停的回调
+   */
+  function handleKeyDown(e, togglePause) {
+    // 忽略输入框中的键盘事件
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+      return
+    }
+
+    switch (e.key) {
+      case 'Control':
+      case 'Meta':
+        if (!ctrlDown.value) {
+          ctrlDown.value = true
+        }
+        break
+
+      case 'ArrowUp':
+      case 'w':
+      case 'W':
+        e.preventDefault()
+        moveSelectedCell('up')
+        break
+
+      case 'ArrowDown':
+      case 's':
+      case 'S':
+        e.preventDefault()
+        moveSelectedCell('down')
+        break
+
+      case 'ArrowLeft':
+      case 'a':
+      case 'A':
+        e.preventDefault()
+        moveSelectedCell('left')
+        break
+
+      case 'ArrowRight':
+      case 'd':
+      case 'D':
+        e.preventDefault()
+        moveSelectedCell('right')
+        break
+
+      case ' ':
+        e.preventDefault()
+        if (timer.isPaused.value) {
+          timer.resume()
+        } else if (!isComplete.value) {
+          actOnSelectedCell(mode.value === MODE.FILL ? CELL_STATE.FILLED : CELL_STATE.MARKED)
+        }
+        break
+
+      case 'f':
+      case 'F':
+        e.preventDefault()
+        actOnSelectedCell(CELL_STATE.FILLED)
+        break
+
+      case 'x':
+      case 'X':
+        e.preventDefault()
+        actOnSelectedCell(CELL_STATE.MARKED)
+        break
+
+      case 'p':
+      case 'P':
+        e.preventDefault()
+        togglePause()
+        break
+
+      case 'z':
+      case 'Z':
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault()
+          undo()
+        }
+        break
+
+      case 'r':
+      case 'R':
+        e.preventDefault()
+        restart()
+        break
     }
   }
 
@@ -604,6 +737,7 @@ export function useGame(timer, favorites) {
     puzzleBank,
     puzzleBankLoaded,
     selectedStar,
+    selectedCell,
 
     // 计算属性
     puzzlesForSize,
@@ -633,7 +767,7 @@ export function useGame(timer, favorites) {
     importPuzzle,
     exportPuzzle,
     restoreFromData,
-    onKeyDown,
+    handleKeyDown,
     onKeyUp,
   }
 }
