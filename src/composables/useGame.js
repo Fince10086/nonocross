@@ -189,6 +189,17 @@ export function useGame(timer, favorites) {
   }
 
   /**
+   * 从谜题列表中随机选择一道
+   * @param {object[]} puzzles - 谜题列表
+   * @returns {object|null} 随机谜题
+   */
+  function pickRandomPuzzle(puzzles) {
+    if (!puzzles || puzzles.length === 0) return null
+    const idx = Math.floor(Math.random() * puzzles.length)
+    return puzzles[idx]
+  }
+
+  /**
    * 重新开始当前谜题
    */
   function restart() {
@@ -410,8 +421,9 @@ export function useGame(timer, favorites) {
     if (stars.length > 0) {
       selectedStar.value = Math.min(...stars)
       const puzzles = puzzlesForStar.value
-      if (puzzles.length > 0) {
-        selectBankPuzzle(puzzles[0])
+      const puzzle = pickRandomPuzzle(puzzles)
+      if (puzzle) {
+        selectBankPuzzle(puzzle)
       } else {
         generateNewPuzzle()
       }
@@ -427,8 +439,9 @@ export function useGame(timer, favorites) {
   function selectStar(star) {
     selectedStar.value = star
     const puzzles = puzzlesForStar.value
-    if (puzzles.length > 0) {
-      selectBankPuzzle(puzzles[0])
+    const puzzle = pickRandomPuzzle(puzzles)
+    if (puzzle) {
+      selectBankPuzzle(puzzle)
     }
   }
 

@@ -125,8 +125,9 @@ onMounted(() => {
         if (stars.length > 0) {
             game.selectedStar.value = Math.min(...stars);
             const puzzles = game.puzzlesForStar.value;
-            if (puzzles.length > 0) {
-                game.selectBankPuzzle(puzzles[0]);
+            const randomPuzzle = puzzles[Math.floor(Math.random() * puzzles.length)];
+            if (randomPuzzle) {
+                game.selectBankPuzzle(randomPuzzle);
             } else {
                 game.generateNewPuzzle();
             }
