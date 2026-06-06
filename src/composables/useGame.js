@@ -244,6 +244,42 @@ export function useGame(timer, favorites) {
     dragValue.value = null
     touchActiveCell.value = null
     selectedCell.value = null
+
+    // 自动填充极端行/列：全空([0])或全满([size])
+    const size = currentSize.value
+    if (currentRowHints.value && currentColHints.value) {
+      // 行
+      for (let r = 0; r < size; r++) {
+        const hints = currentRowHints.value[r]
+        if (!hints) continue
+        if (hints.length === 1 && hints[0] === 0) {
+          // 全空行 -> 全部标记为 X
+          for (let c = 0; c < size; c++) {
+            grid.value[r][c] = CELL_STATE.MARKED
+          }
+        } else if (hints.length === 1 && hints[0] === size) {
+          // 全满行 -> 全部填充
+          for (let c = 0; c < size; c++) {
+            grid.value[r][c] = CELL_STATE.FILLED
+          }
+        }
+      }
+      // 列
+      for (let c = 0; c < size; c++) {
+        const hints = currentColHints.value[c]
+        if (!hints) continue
+        if (hints.length === 1 && hints[0] === 0) {
+          for (let r = 0; r < size; r++) {
+            grid.value[r][c] = CELL_STATE.MARKED
+          }
+        } else if (hints.length === 1 && hints[0] === size) {
+          for (let r = 0; r < size; r++) {
+            grid.value[r][c] = CELL_STATE.FILLED
+          }
+        }
+      }
+    }
+
     initHintDetermined()
   }
 
