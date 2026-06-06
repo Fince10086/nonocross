@@ -167,8 +167,6 @@ onUnmounted(() => {
         <GameBoard
             :grid="game.grid.value"
             :current-size="game.currentSize.value"
-            :cell-size="game.cellSize.value"
-            :hint-area-size="game.hintAreaSize.value"
             :current-col-hints="game.currentColHints.value"
             :current-row-hints="game.currentRowHints.value"
             :col-hint-determined="game.colHintDetermined.value"

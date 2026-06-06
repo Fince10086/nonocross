@@ -1,9 +1,10 @@
 <script setup>
+import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { CELL_SIZE, HINT_AREA_SIZE } from '../constants.js'
+
 const props = defineProps({
   grid: { type: Array, required: true },
   currentSize: { type: Number, required: true },
-  cellSize: { type: String, required: true },
-  hintAreaSize: { type: String, required: true },
   currentColHints: { type: Array, default: null },
   currentRowHints: { type: Array, default: null },
   colHintDetermined: { type: Array, default: () => [] },
@@ -22,6 +23,48 @@ const emit = defineEmits([
   'toggleMode',
   'resume',
 ])
+
+// 动态计算的尺寸
+const cellSize = ref('32px')
+const hintAreaSize = ref('80px')
+
+// 是否启用紧凑模式（hint 区域较小时才缩小字体和间距）
+const isCompact = ref(false)
+
+/**
+ * 根据视口宽度计算棋盘尺寸
+ * 小屏幕下自动缩小，但保证最小 16px 单元格
+ */
+function updateSize() {
+  const viewportWidth = window.innerWidth
+  const padding = viewportWidth < 600 ? 16 : 40
+  const availableWidth = viewportWidth - padding
+
+  // 基础尺寸
+  const baseCell = parseInt(CELL_SIZE[props.currentSize] || CELL_SIZE[10], 10)
+  const baseHint = parseInt(HINT_AREA_SIZE[props.currentSize] || HINT_AREA_SIZE[10], 10)
+
+  const totalOriginal = baseHint + props.currentSize * baseCell
+  const scale = availableWidth / totalOriginal
+
+  if (scale >= 1) {
+    // 屏幕足够大，使用原始尺寸
+    cellSize.value = `${baseCell}px`
+    hintAreaSize.value = `${baseHint}px`
+    isCompact.value = false
+  } else {
+    // 需要缩小，但保证单元格最小 16px，hintArea 最小 55px
+    const newCell = Math.max(16, Math.floor(baseCell * scale))
+    const newHint = Math.max(55, Math.floor(baseHint * scale))
+    cellSize.value = `${newCell}px`
+    hintAreaSize.value = `${newHint}px`
+    // 只有当 hint 区域被显著压缩时才启用紧凑样式
+    isCompact.value = newHint < 70
+  }
+}
+
+// 尺寸变化时重新计算
+watch(() => props.currentSize, updateSize)
 
 /**
  * 判断单元格是否需要加粗边框（每5格一组）
@@ -44,8 +87,8 @@ function isThickBorder(r, c) {
 function cellStyle(r, c) {
   const { thickR, thickC } = isThickBorder(r, c)
   return {
-    width: props.cellSize,
-    height: props.cellSize,
+    width: cellSize.value,
+    height: cellSize.value,
     borderBottom: thickR ? '2px solid #ccc' : undefined,
     borderRight: thickC ? '2px solid #ccc' : undefined,
   }
@@ -57,8 +100,8 @@ function cellStyle(r, c) {
  */
 function colHintStyle() {
   return {
-    width: props.cellSize,
-    height: props.hintAreaSize,
+    width: cellSize.value,
+    height: hintAreaSize.value,
   }
 }
 
@@ -68,8 +111,8 @@ function colHintStyle() {
  */
 function rowHintStyle() {
   return {
-    width: props.hintAreaSize,
-    height: props.cellSize,
+    width: hintAreaSize.value,
+    height: cellSize.value,
   }
 }
 
@@ -131,12 +174,21 @@ function onToggleMode(newMode) {
 function onResume() {
   emit('resume')
 }
+
+onMounted(() => {
+  updateSize()
+  window.addEventListener('resize', updateSize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateSize)
+})
 </script>
 
 <template>
   <div
     class="board-wrapper"
-    :class="{ complete: isComplete }"
+    :class="{ complete: isComplete, 'compact-hints': isCompact }"
     @touchend="onStopDragging"
     @touchcancel="onStopDragging"
   >
@@ -331,7 +383,7 @@ function onResume() {
 }
 
 .hint-num {
-  font-size: 0.75rem;
+  font-size: 1rem;
   font-weight: 600;
   line-height: 1;
   transition: opacity 0.15s ease;
@@ -443,6 +495,21 @@ function onResume() {
 
 .board-wrapper.complete .cell {
   cursor: default;
+}
+
+/* 紧凑模式：只在 hint 区域被显著压缩时启用 */
+.board-wrapper.compact-hints .hint-num {
+  font-size: 0.65rem;
+}
+
+.board-wrapper.compact-hints .col-hint {
+  gap: 1px;
+  padding-bottom: 2px;
+}
+
+.board-wrapper.compact-hints .row-hint {
+  gap: 3px;
+  padding-right: 4px;
 }
 
 @media (max-width: 600px) {
