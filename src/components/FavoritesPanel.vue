@@ -1,4 +1,6 @@
 <script setup>
+import { t } from '../i18n.js'
+
 const props = defineProps({
   favorites: { type: Array, default: () => [] },
 })
@@ -21,7 +23,7 @@ function formatSavedTime(isoString) {
 <template>
   <div v-if="favorites.length > 0" class="favorites-section">
     <div class="favorites-header">
-      <span class="label">Favorites ({{ favorites.length }})</span>
+      <span class="label">{{ t('favorites') }} ({{ favorites.length }})</span>
     </div>
     <div class="favorites-list">
       <div
@@ -32,7 +34,7 @@ function formatSavedTime(isoString) {
         @click="$emit('loadFavorite', fav)"
       >
         <div class="fav-code">
-          {{ fav.code.split(':')[1]?.slice(0, 8) || 'Custom' }}...
+          {{ fav.code.split(':')[1]?.slice(0, 8) || t('custom') }}...
         </div>
         <div class="fav-meta">
           <span class="fav-size">{{ fav.size }}×{{ fav.size }}</span>

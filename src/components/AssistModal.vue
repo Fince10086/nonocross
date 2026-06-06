@@ -1,4 +1,6 @@
 <script setup>
+import { t } from '../i18n.js'
+
 const props = defineProps({
   show: { type: Boolean, default: false },
   settings: { type: Object, required: true },
@@ -22,13 +24,13 @@ function handleToggle(key) {
     @click.self="handleClose"
   >
     <div class="modal">
-      <h3 class="modal-title">Assist Settings</h3>
+      <h3 class="modal-title">{{ t('assistSettings') }}</h3>
 
       <div class="settings-list">
         <div class="setting-item" @click="handleToggle('autoMark')">
           <div class="setting-info">
-            <span class="setting-name">Auto Mark X</span>
-            <span class="setting-desc">Automatically mark empty cells as X when a row/column is completed</span>
+            <span class="setting-name">{{ t('autoMark') }}</span>
+            <span class="setting-desc">{{ t('autoMarkDesc') }}</span>
           </div>
           <div class="toggle" :class="{ active: settings.autoMark }">
             <div class="toggle-knob"></div>
@@ -37,8 +39,8 @@ function handleToggle(key) {
 
         <div class="setting-item" @click="handleToggle('conflictDetect')">
           <div class="setting-info">
-            <span class="setting-name">Conflict Detection</span>
-            <span class="setting-desc">Highlight hints in red when a row/column contains conflicting cells</span>
+            <span class="setting-name">{{ t('conflictDetection') }}</span>
+            <span class="setting-desc">{{ t('conflictDetectionDesc') }}</span>
           </div>
           <div class="toggle" :class="{ active: settings.conflictDetect }">
             <div class="toggle-knob"></div>
@@ -47,8 +49,8 @@ function handleToggle(key) {
 
         <div class="setting-item" @click="handleToggle('derivableHint')">
           <div class="setting-info">
-            <span class="setting-name">Derivable Hint</span>
-            <span class="setting-desc">Highlight hints in blue when more cells can be logically deduced</span>
+            <span class="setting-name">{{ t('derivableHint') }}</span>
+            <span class="setting-desc">{{ t('derivableHintDesc') }}</span>
           </div>
           <div class="toggle" :class="{ active: settings.derivableHint }">
             <div class="toggle-knob"></div>
@@ -57,7 +59,7 @@ function handleToggle(key) {
       </div>
 
       <div class="modal-actions">
-        <button class="btn" @click="handleClose">Close</button>
+        <button class="btn" @click="handleClose">{{ t('close') }}</button>
       </div>
     </div>
   </div>

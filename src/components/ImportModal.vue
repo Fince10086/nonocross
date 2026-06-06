@@ -1,5 +1,6 @@
 <script setup>
 import { ref, watch, nextTick } from 'vue'
+import { t } from '../i18n.js'
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -44,8 +45,8 @@ defineExpose({ setError })
     @click.self="handleClose"
   >
     <div class="modal">
-      <h3 class="modal-title">Import Puzzle</h3>
-      <p class="modal-desc">Paste the puzzle code below:</p>
+      <h3 class="modal-title">{{ t('importPuzzle') }}</h3>
+      <p class="modal-desc">{{ t('pasteCode') }}</p>
       <input
         ref="inputRef"
         v-model="importCode"
@@ -56,8 +57,8 @@ defineExpose({ setError })
       />
       <p v-if="importError" class="modal-error">{{ importError }}</p>
       <div class="modal-actions">
-        <button class="btn" @click="handleImport">Import</button>
-        <button class="btn" @click="handleClose">Cancel</button>
+        <button class="btn" @click="handleImport">{{ t('import') }}</button>
+        <button class="btn" @click="handleClose">{{ t('cancel') }}</button>
       </div>
     </div>
   </div>

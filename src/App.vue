@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useTimer } from "./composables/useTimer.js";
 import { useFavorites } from "./composables/useFavorites.js";
 import { useGame } from "./composables/useGame.js";
+import { t, nextLang } from "./i18n.js";
 
 import GameBoard from "./components/GameBoard.vue";
 import GameControls from "./components/GameControls.vue";
@@ -54,6 +55,10 @@ function handleToggleAssist(key, value) {
     game.toggleAssistSetting(key, value);
 }
 
+function handleSwitchLang() {
+    nextLang();
+}
+
 function handleCloseImport() {
     showImportDialog.value = false;
 }
@@ -81,7 +86,7 @@ async function handleExportPuzzle() {
         }, 2000);
     } catch (e) {
         console.error("复制到剪贴板失败:", e);
-        alert("复制失败，请手动复制以下编码:\n" + code);
+        alert(t('copyFailed') + "\n" + code);
     }
 }
 
@@ -207,6 +212,7 @@ onUnmounted(() => {
             @select-bank-puzzle="game.selectBankPuzzle"
             @show-help="handleShowHelp"
             @show-assist="handleShowAssist"
+            @switch-lang="handleSwitchLang"
         />
 
         <FavoritesPanel
@@ -215,7 +221,7 @@ onUnmounted(() => {
         />
 
         <!-- 导出成功提示 -->
-        <div v-if="showExportToast" class="toast">编码已复制到剪贴板</div>
+        <div v-if="showExportToast" class="toast">{{ t('exportSuccess') }}</div>
 
         <ImportModal
             ref="importModalRef"
@@ -238,7 +244,7 @@ onUnmounted(() => {
 
         <!-- 完成提示 -->
         <div v-if="game.isComplete.value" class="message">
-            Completed in {{ timer.formattedTime }}!
+            {{ t('completed', { time: timer.formattedTime }) }}
         </div>
     </div>
 </template>

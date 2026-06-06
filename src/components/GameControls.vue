@@ -14,6 +14,7 @@ const props = defineProps({
 })
 
 import { formatStars } from '../utils.js'
+import { t, currentLang, LANGUAGE_LABELS } from '../i18n.js'
 
 const emit = defineEmits([
   'togglePause',
@@ -28,6 +29,7 @@ const emit = defineEmits([
   'selectBankPuzzle',
   'showHelp',
   'showAssist',
+  'switchLang',
 ])
 </script>
 
@@ -37,22 +39,22 @@ const emit = defineEmits([
     <div class="controls-row">
       <div class="btn-group">
         <button class="btn" @click="$emit('togglePause')">
-          {{ isPaused ? 'Resume' : 'Pause' }}
+          {{ isPaused ? t('resume') : t('pause') }}
         </button>
         <button
           class="btn"
           @click="$emit('undo')"
           :disabled="historyLength === 0 || isComplete"
         >
-          Undo
+          {{ t('undo') }}
         </button>
-        <button class="btn" @click="$emit('restart')">Restart</button>
+        <button class="btn" @click="$emit('restart')">{{ t('restart') }}</button>
         <button
           class="btn"
           @click="$emit('generateNewPuzzle')"
           :disabled="isGenerating"
         >
-          {{ isGenerating ? 'Generating...' : 'New Random' }}
+          {{ isGenerating ? t('generating') : t('newRandom') }}
         </button>
       </div>
     </div>
@@ -79,28 +81,31 @@ const emit = defineEmits([
           </option>
         </select>
       </div>
-      <button class="btn btn-icon" @click="$emit('showHelp')" title="Help">?</button>
-      <button class="btn btn-icon" @click="$emit('showAssist')" title="Assist">&#9881;</button>
+      <div class="btn-group">
+        <button class="btn btn-icon" @click="$emit('showHelp')" :title="t('help')">?</button>
+        <button class="btn btn-icon" @click="$emit('showAssist')" :title="t('assistSettings')">&#9881;</button>
+        <button class="btn btn-icon" @click="$emit('switchLang')">{{ LANGUAGE_LABELS[currentLang] }}</button>
+      </div>
     </div>
 
     <!-- Row 3: Import / Export / Save / Delete -->
     <div class="controls-row">
       <div class="btn-group">
-        <button class="btn" @click="$emit('showImport')">Import</button>
-        <button class="btn" @click="$emit('exportPuzzle')">Export</button>
+        <button class="btn" @click="$emit('showImport')">{{ t('import') }}</button>
+        <button class="btn" @click="$emit('exportPuzzle')">{{ t('export') }}</button>
         <button
           class="btn"
           @click="$emit('saveCurrentPuzzle')"
           :disabled="!currentSolution"
         >
-          {{ isInFavorites ? 'Update' : 'Save' }}
+          {{ isInFavorites ? t('update') : t('save') }}
         </button>
         <button
           class="btn"
           @click="$emit('deleteFromFavorites')"
           :disabled="!isInFavorites"
         >
-          Delete
+          {{ t('delete') }}
         </button>
       </div>
     </div>
@@ -118,6 +123,7 @@ const emit = defineEmits([
 .controls-row {
   display: flex;
   justify-content: center;
+  gap: 8px;
 }
 
 .puzzle-select {
@@ -126,9 +132,5 @@ const emit = defineEmits([
   font-weight: 600;
   background: #fff;
   cursor: pointer;
-}
-
-.controls-row .btn-icon {
-  margin-left: 8px;
 }
 </style>

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { CELL_SIZE, HINT_AREA_SIZE } from '../constants.js'
+import { t } from '../i18n.js'
 
 const props = defineProps({
   grid: { type: Array, required: true },
@@ -320,8 +321,8 @@ const boardVars = computed(() => {
       :class="{ paused: isPaused }"
       @click="onToggleMode(props.mode === 'fill' ? 'x' : 'fill')"
     >
-      <div class="mode-top" :class="{ active: mode === 'fill' }">Fill</div>
-      <div class="mode-bottom" :class="{ active: mode === 'x' }">X</div>
+      <div class="mode-top" :class="{ active: mode === 'fill' }">{{ t('fill') }}</div>
+      <div class="mode-bottom" :class="{ active: mode === 'x' }">{{ t('markX') }}</div>
     </div>
 
     <!-- 列提示区 -->
@@ -407,7 +408,7 @@ const boardVars = computed(() => {
         class="pause-overlay"
         @click="onResume"
       >
-        <span class="pause-text">PAUSED</span>
+        <span class="pause-text">{{ t('paused') }}</span>
       </div>
     </div>
   </div>

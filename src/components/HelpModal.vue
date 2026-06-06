@@ -1,4 +1,6 @@
 <script setup>
+import { t } from '../i18n.js'
+
 const props = defineProps({
   show: { type: Boolean, default: false },
 })
@@ -17,71 +19,70 @@ function handleClose() {
     @click.self="handleClose"
   >
     <div class="modal">
-      <h3 class="modal-title">How to Play</h3>
+      <h3 class="modal-title">{{ t('howToPlay') }}</h3>
       
       <div class="modal-content">
         <p class="intro">
           <a href="https://en.wikipedia.org/wiki/Nonogram" target="_blank">Nonogram</a> 
-          is a logic puzzle where you fill grid cells according to the numbers on the sides.
-          Each number indicates how many consecutive filled cells are in that row/column.
+          {{ t('nonogramDesc') }}
         </p>
 
-        <h4>Keyboard Shortcuts</h4>
+        <h4>{{ t('keyboardShortcuts') }}</h4>
         
-        <h5>Move &amp; Fill</h5>
+        <h5>{{ t('moveAndFill') }}</h5>
         <div class="shortcut-table">
           <div class="shortcut-row">
             <span class="key">↑↓←→</span>
-            <span class="desc">Move selection (wrap around)</span>
+            <span class="desc">{{ t('moveSelection') }}</span>
           </div>
           <div class="shortcut-row">
             <span class="key">W A S D</span>
-            <span class="desc">Move selection (wrap around)</span>
+            <span class="desc">{{ t('moveSelection') }}</span>
           </div>
           <div class="shortcut-row">
             <span class="key">Space</span>
-            <span class="desc">Fill / Clear by current mode</span>
+            <span class="desc">{{ t('fillClearByMode') }}</span>
           </div>
           <div class="shortcut-row">
             <span class="key">F</span>
-            <span class="desc">Fill (clear if already filled)</span>
+            <span class="desc">{{ t('fillDirect') }}</span>
           </div>
           <div class="shortcut-row">
             <span class="key">X</span>
-            <span class="desc">Mark X (clear if already marked)</span>
+            <span class="desc">{{ t('markXDirect') }}</span>
           </div>
         </div>
 
-        <h5>Game Controls</h5>
+        <h5>{{ t('gameControls') }}</h5>
         <div class="shortcut-table">
           <div class="shortcut-row">
             <span class="key">P</span>
-            <span class="desc">Pause / Resume</span>
+            <span class="desc">{{ t('pauseResume') }}</span>
           </div>
           <div class="shortcut-row">
             <span class="key">Ctrl+Z</span>
-            <span class="desc">Undo</span>
+            <span class="desc">{{ t('undoShort') }}</span>
           </div>
           <div class="shortcut-row">
             <span class="key">R</span>
-            <span class="desc">Restart</span>
+            <span class="desc">{{ t('restartShort') }}</span>
           </div>
           <div class="shortcut-row">
             <span class="key">Ctrl / Cmd</span>
-            <span class="desc">Hold to toggle mode (Fill ↔ X)</span>
+            <span class="desc">{{ t('holdToggleMode') }}</span>
           </div>
         </div>
 
-        <h4>Mouse / Touch</h4>
+        <h4>{{ t('mouseTouch') }}</h4>
         <ul class="tips">
-          <li><strong>Left click</strong> to fill, <strong>Right click</strong> to mark X</li>
-          <li><strong>Drag</strong> to fill multiple cells at once</li>
-          <li><strong>Long press</strong> on mobile to toggle mode</li>
+          <li>{{ t('leftClickFill') }}</li>
+          <li>{{ t('dragFillMultiple') }}</li>
+          <li>{{ t('longPressToggle') }}</li>
         </ul>
       </div>
 
       <div class="modal-actions">
-        <button class="btn" @click="handleClose">Close</button>
+        <button class="btn" @click="handleClose">{{ t('close') }}</button>
       </div>
     </div>
   </div>
