@@ -79,31 +79,7 @@ function handleDeleteFromFavorites() {
 function handleLoadFavorite(fav) {
     const data = favorites.loadFavoriteData(fav);
     if (!data) return;
-
-    game.currentSize.value = data.size;
-    game.currentSolution.value = data.solution;
-    game.currentRowHints.value = data.rowHints;
-    game.currentColHints.value = data.colHints;
-    game.currentStars.value = data.starsText;
-    game.currentPuzzleId.value = null;
-
-    if (data.isComplete) {
-        game.grid.value = data.solution.map((row) =>
-            row.map((cell) => (cell === 1 ? 1 : 0)),
-        );
-        timer.setTime(data.seconds);
-        game.isComplete.value = true;
-        timer.stop();
-    } else if (data.grid) {
-        game.grid.value = data.grid.map((row) => [...row]);
-        timer.setTime(data.seconds);
-        game.isComplete.value = false;
-        timer.reset();
-        game.history.value = [];
-        timer.start();
-    } else {
-        game.restart();
-    }
+    game.restoreFromData(data);
 }
 
 function handleKeyDown(e) {

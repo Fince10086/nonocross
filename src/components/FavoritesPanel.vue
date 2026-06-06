@@ -3,13 +3,9 @@ const props = defineProps({
   favorites: { type: Array, default: () => [] },
 })
 
-const emit = defineEmits(['loadFavorite'])
+import { formatTime as formatTimeFromSeconds } from '../utils.js'
 
-function formatTimeFromSeconds(totalSeconds) {
-  const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0')
-  const s = (totalSeconds % 60).toString().padStart(2, '0')
-  return `${m}:${s}`
-}
+const emit = defineEmits(['loadFavorite'])
 
 function formatSavedTime(isoString) {
   if (!isoString) return ''

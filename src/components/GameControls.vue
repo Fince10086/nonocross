@@ -13,6 +13,8 @@ const props = defineProps({
   currentPuzzleId: { type: String, default: null },
 })
 
+import { formatStars } from '../utils.js'
+
 const emit = defineEmits([
   'togglePause',
   'undo',
@@ -25,13 +27,6 @@ const emit = defineEmits([
   'selectStar',
   'selectBankPuzzle',
 ])
-
-function formatStars(rating) {
-  const full = Math.floor(rating)
-  const half = rating % 1 === 0.5
-  const empty = 5 - full - (half ? 1 : 0)
-  return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(empty)
-}
 </script>
 
 <template>

@@ -8,14 +8,9 @@ const props = defineProps({
   currentSize: { type: Number, default: 10 },
 })
 
-const emit = defineEmits(['changeSize', 'selectStar', 'selectBankPuzzle'])
+import { formatStars } from '../utils.js'
 
-function formatStars(rating) {
-  const full = Math.floor(rating)
-  const half = rating % 1 === 0.5
-  const empty = 5 - full - (half ? 1 : 0)
-  return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(empty)
-}
+const emit = defineEmits(['changeSize', 'selectStar', 'selectBankPuzzle'])
 </script>
 
 <template>

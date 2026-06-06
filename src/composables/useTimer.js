@@ -1,15 +1,5 @@
-import { ref, computed, onUnmounted } from 'vue'
-
-/**
- * 格式化秒数为 MM:SS 字符串
- * @param {number} totalSeconds - 总秒数
- * @returns {string} 格式化后的时间字符串
- */
-function formatTime(totalSeconds) {
-  const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0')
-  const s = (totalSeconds % 60).toString().padStart(2, '0')
-  return `${m}:${s}`
-}
+import { ref, computed, onUnmounted, readonly } from 'vue'
+import { formatTime } from '../utils.js'
 
 /**
  * 计时器 Composable
@@ -115,13 +105,4 @@ export function useTimer() {
     reset,
     setTime,
   }
-}
-
-/**
- * 创建只读的 computed ref
- * @param {import('vue').Ref} refValue
- * @returns {import('vue').ComputedRef}
- */
-function readonly(refValue) {
-  return computed(() => refValue.value)
 }

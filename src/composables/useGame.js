@@ -3,11 +3,11 @@ import {
   getHints,
   fullSettle,
   sweepsToStars,
-  formatStars,
   getDeterminedHints,
   decodePuzzle,
   encodePuzzle,
 } from '../solver.js'
+import { formatStars } from '../utils.js'
 import { generatePuzzleAsync } from '../generator.js'
 import {
   CELL_STATE,
@@ -410,6 +410,35 @@ export function useGame(timer, favorites) {
   }
 
   /**
+   * 从收藏数据恢复游戏状态
+   * @param {object} data - 收藏数据对象
+   */
+  function restoreFromData(data) {
+    currentSize.value = data.size
+    currentSolution.value = data.solution
+    currentRowHints.value = data.rowHints
+    currentColHints.value = data.colHints
+    currentStars.value = data.starsText
+    currentPuzzleId.value = null
+
+    if (data.isComplete) {
+      grid.value = data.solution.map((row) => row.map((cell) => (cell === 1 ? 1 : 0)))
+      isComplete.value = true
+      timer.stop()
+      timer.setTime(data.seconds)
+    } else if (data.grid) {
+      grid.value = data.grid.map((row) => [...row])
+      isComplete.value = false
+      timer.reset()
+      timer.setTime(data.seconds)
+      history.value = []
+      timer.start()
+    } else {
+      restart()
+    }
+  }
+
+  /**
    * 切换网格尺寸
    * @param {number} size - 新尺寸
    */
@@ -568,6 +597,7 @@ export function useGame(timer, favorites) {
     selectStar,
     importPuzzle,
     exportPuzzle,
+    restoreFromData,
     onKeyDown,
     onKeyUp,
   }
