@@ -375,7 +375,26 @@ export function getDeterminedHints(state, hints) {
     }
 
     if (allFilled) {
-      determined.add(h)
+      // 单行只有一个提示时，只要填满就直接变灰
+      if (hints.length === 1) {
+        determined.add(h)
+        continue
+      }
+
+      // 整行已完全解出，直接变灰
+      const isFullySolved = state.every(s => s !== null)
+      if (isFullySolved) {
+        determined.add(h)
+        continue
+      }
+
+      // 多提示时，提示块被隔离（左右是 X 标记或边界）才变灰
+      const leftIsolated = (first[0] === 0) || (state[first[0] - 1] === 0)
+      const rightIsolated = (first[1] === size - 1) || (state[first[1] + 1] === 0)
+
+      if (leftIsolated && rightIsolated) {
+        determined.add(h)
+      }
     }
   }
 
