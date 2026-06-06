@@ -138,7 +138,7 @@ function onCellMouseEnter(r, c) {
 
 // 触摸长按状态
 const touchPress = ref(null)
-const LONG_PRESS_DURATION = 400
+const LONG_PRESS_DURATION = 300
 const MOVE_THRESHOLD = 10
 
 /**
@@ -157,9 +157,10 @@ function onCellTouchStart(e, r, c) {
     startX: touch.clientX,
     startY: touch.clientY,
     timer: setTimeout(() => {
-      // 长按触发：切换模式
+      // 长按触发：切换模式并填充当前格
       touchPress.value = null
       emit('toggleMode', props.mode === 'fill' ? 'x' : 'fill')
+      emit('cellTouchStart', e, r, c)
     }, LONG_PRESS_DURATION),
   }
 }
