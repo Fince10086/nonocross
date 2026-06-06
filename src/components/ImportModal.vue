@@ -56,8 +56,8 @@ defineExpose({ setError })
       />
       <p v-if="importError" class="modal-error">{{ importError }}</p>
       <div class="modal-actions">
-        <button class="action-btn" @click="handleImport">Import</button>
-        <button class="action-btn" @click="handleClose">Cancel</button>
+        <button class="btn" @click="handleImport">Import</button>
+        <button class="btn" @click="handleClose">Cancel</button>
       </div>
     </div>
   </div>
@@ -115,20 +115,5 @@ defineExpose({ setError })
   display: flex;
   gap: 8px;
   justify-content: flex-end;
-}
-
-.action-btn {
-  padding: 8px 16px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  border: 2px solid #000;
-  background: #fff;
-  color: #000;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.action-btn:hover {
-  background: #f0f0f0;
 }
 </style>

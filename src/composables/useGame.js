@@ -89,6 +89,12 @@ export function useGame(timer, favorites) {
       colHintDetermined.value = []
       return
     }
+    // 确保 hints 与当前 grid 尺寸匹配（切换尺寸时可能不匹配）
+    if (currentRowHints.value.length !== grid.value.length) {
+      rowHintDetermined.value = []
+      colHintDetermined.value = []
+      return
+    }
     rowHintDetermined.value = currentRowHints.value.map((hints, r) => {
       const state = grid.value[r].map(gridToSolverState)
       return getDeterminedHints(state, hints)
@@ -106,6 +112,8 @@ export function useGame(timer, favorites) {
    */
   function updateHintDetermined(r, c) {
     if (!currentRowHints.value || !currentColHints.value) return
+    // 确保坐标在当前 hints 范围内
+    if (r >= currentRowHints.value.length || c >= currentColHints.value.length) return
     const newRowHints = [...rowHintDetermined.value]
     const rowState = grid.value[r].map(gridToSolverState)
     newRowHints[r] = getDeterminedHints(rowState, currentRowHints.value[r])

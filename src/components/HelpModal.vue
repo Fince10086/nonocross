@@ -81,7 +81,7 @@ function handleClose() {
       </div>
 
       <div class="modal-actions">
-        <button class="action-btn" @click="handleClose">Close</button>
+        <button class="btn" @click="handleClose">Close</button>
       </div>
     </div>
   </div>
@@ -196,21 +196,6 @@ h5 {
   display: flex;
   justify-content: flex-end;
   flex-shrink: 0;
-}
-
-.action-btn {
-  padding: 8px 16px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  border: 2px solid #000;
-  background: #fff;
-  color: #000;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.action-btn:hover {
-  background: #f0f0f0;
 }
 
 @media (max-width: 600px) {
