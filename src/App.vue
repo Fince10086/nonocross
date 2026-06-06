@@ -69,6 +69,7 @@ function handleSaveCurrentPuzzle() {
         isComplete: game.isComplete.value,
         grid: game.grid.value,
         seconds: timer.seconds.value,
+        sweeps: game.currentSweeps.value,
     });
 }
 

@@ -375,9 +375,10 @@ export function generatePuzzle(size, maxAttempts = 50) {
 /**
  * 将谜题网格编码为紧凑字符串
  * @param {Grid} solution - 谜题解网格
- * @returns {string} 编码后的字符串，格式为 "size:base64"
+ * @param {number} [sweeps=0] - 求解扫描次数
+ * @returns {string} 编码后的字符串，格式为 "size:base64:sweeps"
  */
-export function encodePuzzle(solution) {
+export function encodePuzzle(solution, sweeps = 0) {
   const size = solution.length
   const bits = []
   for (let r = 0; r < size; r++) {
@@ -401,21 +402,52 @@ export function encodePuzzle(solution) {
     chars.push(base64[val])
   }
 
-  return `${size}:${chars.join('')}`
+  return `${size}:${chars.join('')}:${sweeps}`
 }
 
 /**
  * 从编码字符串解码谜题
+ * 支持格式:
+ *   - 导出格式(新): "size:base64:sweeps"
+ *   - 导出格式(旧): "size:base64"
+ *   - 内置格式:     "id:size:base64:sweeps"
  * @param {string} code - 编码字符串
- * @returns {{size: number, solution: Grid}|null} 解码结果，失败返回 null
+ * @returns {{id?: string, size: number, solution: Grid, sweeps?: number}|null} 解码结果，失败返回 null
  */
 export function decodePuzzle(code) {
   const parts = code.split(':')
-  if (parts.length !== 2) return null
+  if (parts.length < 2 || parts.length > 4) return null
 
-  const size = parseInt(parts[0], 10)
-  const encoded = parts[1]
-  if (!size || !encoded || size < 1) return null
+  let id = null
+  let size
+  let encoded
+  let sweeps = null
+
+  if (parts.length === 4) {
+    // id:size:base64:sweeps
+    id = parts[0]
+    size = parseInt(parts[1], 10)
+    encoded = parts[2]
+    sweeps = parseInt(parts[3], 10)
+  } else if (parts.length === 3) {
+    // 可能是 size:base64:sweeps 或 id:size:base64
+    const firstIsNumber = /^\d+$/.test(parts[0])
+    if (firstIsNumber) {
+      size = parseInt(parts[0], 10)
+      encoded = parts[1]
+      sweeps = parseInt(parts[2], 10)
+    } else {
+      id = parts[0]
+      size = parseInt(parts[1], 10)
+      encoded = parts[2]
+    }
+  } else {
+    // size:base64 (旧导出格式)
+    size = parseInt(parts[0], 10)
+    encoded = parts[1]
+  }
+
+  if (!size || !encoded || size < 1 || isNaN(size)) return null
 
   const base64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
   const bits = []
@@ -438,5 +470,9 @@ export function decodePuzzle(code) {
     solution.push(row)
   }
 
-  return { size, solution }
+  const result = { size, solution }
+  if (id !== null) result.id = id
+  if (sweeps !== null && !isNaN(sweeps)) result.sweeps = sweeps
+
+  return result
 }

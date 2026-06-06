@@ -42,6 +42,7 @@ export function useGame(timer, favorites) {
   const currentRowHints = ref(null)
   const currentColHints = ref(null)
   const currentStars = ref(null)
+  const currentSweeps = ref(null)
   const isGenerating = ref(false)
   const currentPuzzleId = ref(null)
 
@@ -145,26 +146,11 @@ export function useGame(timer, favorites) {
    * @returns {object|null} 解析后的谜题对象
    */
   function enrichPuzzle(line) {
-    const parts = line.split(':')
-    if (parts.length !== 4) return null
+    const result = decodePuzzle(line.trim())
+    if (!result) return null
 
-    const id = parts[0]
-    const size = parseInt(parts[1], 10)
-    const solutionStr = parts[2]
-    const sweeps = parseInt(parts[3], 10)
-
-    if (!size || !solutionStr || solutionStr.length !== size * size) return null
-
-    const solution = []
-    for (let r = 0; r < size; r++) {
-      const row = []
-      for (let c = 0; c < size; c++) {
-        const val = parseInt(solutionStr[r * size + c], 10)
-        if (val !== 0 && val !== 1) return null
-        row.push(val)
-      }
-      solution.push(row)
-    }
+    const { id, size, solution, sweeps } = result
+    if (!id || sweeps === null || sweeps === undefined) return null
 
     const rowHints = solution.map((row) => getHints(row))
     const colHints = solution[0].map((_, colIndex) =>
@@ -207,6 +193,7 @@ export function useGame(timer, favorites) {
     currentRowHints.value = puzzle.rowHints
     currentColHints.value = puzzle.colHints
     currentStars.value = puzzle.starsText || null
+    currentSweeps.value = puzzle.sweeps || null
     currentPuzzleId.value = puzzle.id || null
     restart()
   }
@@ -458,6 +445,7 @@ export function useGame(timer, favorites) {
     currentRowHints.value = data.rowHints
     currentColHints.value = data.colHints
     currentStars.value = data.starsText
+    currentSweeps.value = data.sweeps || null
     currentPuzzleId.value = null
 
     if (data.isComplete) {
@@ -526,15 +514,20 @@ export function useGame(timer, favorites) {
       return { success: false, error: '无效的编码格式' }
     }
 
-    const { size, solution } = result
+    const { size, solution, sweeps: encodedSweeps } = result
     const rowHints = solution.map((row) => getHints(row))
     const colHints = solution[0].map((_, colIndex) =>
       getHints(solution.map((row) => row[colIndex])),
     )
 
-    const { solved, sweeps } = fullSettle(rowHints, colHints)
-    if (!solved) {
-      return { success: false, error: '该谜题无法通过逻辑推导求解' }
+    let sweeps = encodedSweeps
+    if (sweeps === null || sweeps === undefined) {
+      // 旧格式无 sweeps，重新计算
+      const settleResult = fullSettle(rowHints, colHints)
+      if (!settleResult.solved) {
+        return { success: false, error: '该谜题无法通过逻辑推导求解' }
+      }
+      sweeps = settleResult.sweeps
     }
 
     const stars = sweepsToStars(sweeps, size)
@@ -560,7 +553,7 @@ export function useGame(timer, favorites) {
    */
   function exportPuzzle() {
     if (!currentSolution.value) return null
-    const code = encodePuzzle(currentSolution.value)
+    const code = encodePuzzle(currentSolution.value, currentSweeps.value || 0)
     return code
   }
 
@@ -605,6 +598,7 @@ export function useGame(timer, favorites) {
     currentRowHints,
     currentColHints,
     currentStars,
+    currentSweeps,
     isGenerating,
     currentPuzzleId,
     puzzleBank,

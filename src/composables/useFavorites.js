@@ -50,16 +50,25 @@ export function useFavorites() {
     }
   }
 
+  /**
+   * 比较两个谜题编码是否指向同一个解
+   */
+  function isSamePuzzle(codeA, codeB) {
+    const a = codeA.split(':')
+    const b = codeB.split(':')
+    return a[0] === b[0] && a[1] === b[1]
+  }
+
   function isInFavorites(solution) {
     if (!solution) return false
     const code = encodePuzzle(solution)
-    return favorites.value.some((f) => f.code === code)
+    return favorites.value.some((f) => isSamePuzzle(f.code, code))
   }
 
-  function saveCurrentPuzzle({ solution, size, starsText, isComplete, grid, seconds }) {
+  function saveCurrentPuzzle({ solution, size, starsText, isComplete, grid, seconds, sweeps }) {
     if (!solution) return
-    const code = encodePuzzle(solution)
-    const existingIndex = favorites.value.findIndex((f) => f.code === code)
+    const code = encodePuzzle(solution, sweeps || 0)
+    const existingIndex = favorites.value.findIndex((f) => isSamePuzzle(f.code, code))
 
     const favorite = {
       code,
@@ -84,14 +93,14 @@ export function useFavorites() {
   function deleteFromFavorites(solution) {
     if (!solution) return
     const code = encodePuzzle(solution)
-    favorites.value = favorites.value.filter((f) => f.code !== code)
+    favorites.value = favorites.value.filter((f) => !isSamePuzzle(f.code, code))
     saveFavorites()
   }
 
   function markCompleted(solution, seconds) {
     if (!solution) return
     const code = encodePuzzle(solution)
-    const idx = favorites.value.findIndex((f) => f.code === code)
+    const idx = favorites.value.findIndex((f) => isSamePuzzle(f.code, code))
     if (idx >= 0) {
       favorites.value[idx].completed = true
       favorites.value[idx].completedAt = new Date().toISOString()
@@ -105,7 +114,7 @@ export function useFavorites() {
     const result = decodePuzzle(fav.code)
     if (!result) return null
 
-    const { size, solution } = result
+    const { size, solution, sweeps } = result
     const rowHints = solution.map((row) => getHints(row))
     const colHints = solution[0].map((_, colIndex) =>
       getHints(solution.map((row) => row[colIndex])),
@@ -120,6 +129,7 @@ export function useFavorites() {
       isComplete: fav.completed,
       grid: fav.completed ? null : fav.grid,
       seconds: fav.seconds,
+      sweeps,
     }
   }
 
