@@ -3,10 +3,10 @@ import {
   getHints,
   fullSettle,
   sweepsToStars,
-  getDeterminedHints,
   decodePuzzle,
   encodePuzzle,
 } from '../solver.js'
+import { getDeterminedHints } from '../hints.js'
 import { formatStars } from '../utils.js'
 import { generatePuzzleAsync } from '../generator.js'
 import {
@@ -72,23 +72,46 @@ export function useGame(timer, favorites) {
     return null
   }
 
-  // 已确定的行提示
-  const rowHintDetermined = computed(() => {
-    if (!currentRowHints.value) return []
-    return currentRowHints.value.map((hints, r) => {
+  // 已确定的行提示（增量更新，避免全量重算）
+  const rowHintDetermined = ref([])
+  const colHintDetermined = ref([])
+
+  /**
+   * 全量初始化已确定提示
+   */
+  function initHintDetermined() {
+    if (!currentRowHints.value || !currentColHints.value) {
+      rowHintDetermined.value = []
+      colHintDetermined.value = []
+      return
+    }
+    rowHintDetermined.value = currentRowHints.value.map((hints, r) => {
       const state = grid.value[r].map(gridToSolverState)
       return getDeterminedHints(state, hints)
     })
-  })
-
-  // 已确定的列提示
-  const colHintDetermined = computed(() => {
-    if (!currentColHints.value) return []
-    return currentColHints.value.map((hints, c) => {
+    colHintDetermined.value = currentColHints.value.map((hints, c) => {
       const state = grid.value.map((row) => gridToSolverState(row[c]))
       return getDeterminedHints(state, hints)
     })
-  })
+  }
+
+  /**
+   * 增量更新受影响的行和列的已确定提示
+   * @param {number} r - 行索引
+   * @param {number} c - 列索引
+   */
+  function updateHintDetermined(r, c) {
+    if (!currentRowHints.value || !currentColHints.value) return
+    const newRowHints = [...rowHintDetermined.value]
+    const rowState = grid.value[r].map(gridToSolverState)
+    newRowHints[r] = getDeterminedHints(rowState, currentRowHints.value[r])
+    rowHintDetermined.value = newRowHints
+
+    const newColHints = [...colHintDetermined.value]
+    const colState = grid.value.map((row) => gridToSolverState(row[c]))
+    newColHints[c] = getDeterminedHints(colState, currentColHints.value[c])
+    colHintDetermined.value = newColHints
+  }
 
   // 当前尺寸的所有谜题
   const puzzlesForSize = computed(() => {
@@ -211,6 +234,7 @@ export function useGame(timer, favorites) {
     isDragging.value = false
     dragValue.value = null
     touchActiveCell.value = null
+    initHintDetermined()
   }
 
   /**
@@ -229,6 +253,7 @@ export function useGame(timer, favorites) {
   function undo() {
     if (history.value.length === 0) return
     grid.value = history.value.pop()
+    initHintDetermined()
   }
 
   /**
@@ -277,6 +302,7 @@ export function useGame(timer, favorites) {
     dragValue.value = currentVal === targetVal ? CELL_STATE.EMPTY : targetVal
     grid.value[r][c] = dragValue.value
     isDragging.value = true
+    updateHintDetermined(r, c)
     checkComplete()
   }
 
@@ -287,11 +313,17 @@ export function useGame(timer, favorites) {
    */
   function cellMouseEnter(r, c) {
     if (!isDragging.value || isComplete.value) return
+    let changed = false
     if (dragValue.value === CELL_STATE.EMPTY) {
-      grid.value[r][c] = CELL_STATE.EMPTY
+      if (grid.value[r][c] !== CELL_STATE.EMPTY) {
+        grid.value[r][c] = CELL_STATE.EMPTY
+        changed = true
+      }
     } else if (grid.value[r][c] === CELL_STATE.EMPTY) {
       grid.value[r][c] = dragValue.value
+      changed = true
     }
+    if (changed) updateHintDetermined(r, c)
   }
 
   /**
@@ -322,6 +354,7 @@ export function useGame(timer, favorites) {
     grid.value[r][c] = dragValue.value
     isDragging.value = true
     touchActiveCell.value = { r, c }
+    updateHintDetermined(r, c)
     checkComplete()
   }
 
@@ -350,11 +383,17 @@ export function useGame(timer, favorites) {
 
     touchActiveCell.value = { r, c }
 
+    let changed = false
     if (dragValue.value === CELL_STATE.EMPTY) {
-      grid.value[r][c] = CELL_STATE.EMPTY
+      if (grid.value[r][c] !== CELL_STATE.EMPTY) {
+        grid.value[r][c] = CELL_STATE.EMPTY
+        changed = true
+      }
     } else if (grid.value[r][c] === CELL_STATE.EMPTY) {
       grid.value[r][c] = dragValue.value
+      changed = true
     }
+    if (changed) updateHintDetermined(r, c)
   }
 
   /**
@@ -426,6 +465,7 @@ export function useGame(timer, favorites) {
       isComplete.value = true
       timer.stop()
       timer.setTime(data.seconds)
+      initHintDetermined()
     } else if (data.grid) {
       grid.value = data.grid.map((row) => [...row])
       isComplete.value = false
@@ -433,6 +473,7 @@ export function useGame(timer, favorites) {
       timer.setTime(data.seconds)
       history.value = []
       timer.start()
+      initHintDetermined()
     } else {
       restart()
     }

@@ -194,7 +194,7 @@ onUnmounted(() => {
 
         <!-- 完成提示 -->
         <div v-if="game.isComplete.value" class="message">
-            用时 {{ timer.formattedTime }} 完成！
+            Completed in {{ timer.formattedTime }}!
         </div>
     </div>
 </template>
