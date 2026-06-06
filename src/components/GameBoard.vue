@@ -135,28 +135,90 @@ function onCellMouseEnter(r, c) {
   emit('cellMouseEnter', r, c)
 }
 
+// 触摸长按状态
+const touchPress = ref(null)
+const LONG_PRESS_DURATION = 400
+const MOVE_THRESHOLD = 10
+
 /**
  * 处理单元格触摸开始
+ * 启动长按检测：400ms 内未移动则切换模式
  * @param {TouchEvent} e - 触摸事件
  * @param {number} r - 行索引
  * @param {number} c - 列索引
  */
 function onCellTouchStart(e, r, c) {
-  emit('cellTouchStart', e, r, c)
+  if (props.isComplete || props.isPaused) return
+
+  const touch = e.touches[0]
+  touchPress.value = {
+    r, c,
+    startX: touch.clientX,
+    startY: touch.clientY,
+    timer: setTimeout(() => {
+      // 长按触发：切换模式
+      touchPress.value = null
+      emit('toggleMode', props.mode === 'fill' ? 'x' : 'fill')
+    }, LONG_PRESS_DURATION),
+  }
 }
 
 /**
  * 处理触摸移动
+ * 移动超过阈值时取消长按，开始拖拽
  * @param {TouchEvent} e - 触摸事件
  */
 function onCellTouchMove(e) {
-  emit('cellTouchMove', e)
+  if (!touchPress.value) {
+    // 正常拖拽中，直接转发
+    emit('cellTouchMove', e)
+    return
+  }
+
+  const touch = e.touches[0]
+  const dx = touch.clientX - touchPress.value.startX
+  const dy = touch.clientY - touchPress.value.startY
+
+  // 移动超过阈值：取消长按，开始拖拽
+  if (Math.abs(dx) > MOVE_THRESHOLD || Math.abs(dy) > MOVE_THRESHOLD) {
+    clearTimeout(touchPress.value.timer)
+    const { r, c } = touchPress.value
+    touchPress.value = null
+    // 开始拖拽
+    emit('cellTouchStart', e, r, c)
+  }
+
+  // 已经开始拖拽，转发 touchmove
+  if (!touchPress.value) {
+    emit('cellTouchMove', e)
+  }
+}
+
+/**
+ * 处理触摸结束
+ * 短按时填充一个格子
+ * @param {TouchEvent} e - 触摸事件
+ */
+function onCellTouchEnd(e) {
+  if (!touchPress.value) return
+
+  // 短按：填充一个格子
+  clearTimeout(touchPress.value.timer)
+  const { r, c } = touchPress.value
+  touchPress.value = null
+  emit('cellTouchStart', e, r, c)
+  emit('stopDragging')
 }
 
 /**
  * 停止拖拽
  */
 function onStopDragging() {
+  // 清理长按状态
+  if (touchPress.value) {
+    clearTimeout(touchPress.value.timer)
+    touchPress.value = null
+  }
   emit('stopDragging')
 }
 
@@ -189,25 +251,16 @@ onUnmounted(() => {
   <div
     class="board-wrapper"
     :class="{ complete: isComplete, 'compact-hints': isCompact }"
-    @touchend="onStopDragging"
     @touchcancel="onStopDragging"
   >
     <!-- 左上角间隔区（模式切换） -->
-    <div class="spacer" :class="{ paused: isPaused }">
-      <div
-        class="mode-top"
-        :class="{ active: mode === 'fill' }"
-        @click="onToggleMode('fill')"
-      >
-        Fill
-      </div>
-      <div
-        class="mode-bottom"
-        :class="{ active: mode === 'x' }"
-        @click="onToggleMode('x')"
-      >
-        X
-      </div>
+    <div
+      class="spacer"
+      :class="{ paused: isPaused }"
+      @click="onToggleMode(props.mode === 'fill' ? 'x' : 'fill')"
+    >
+      <div class="mode-top" :class="{ active: mode === 'fill' }">Fill</div>
+      <div class="mode-bottom" :class="{ active: mode === 'x' }">X</div>
     </div>
 
     <!-- 列提示区 -->
@@ -272,6 +325,7 @@ onUnmounted(() => {
           @mouseenter="onCellMouseEnter(r, c)"
           @touchstart.prevent="onCellTouchStart($event, r, c)"
           @touchmove.prevent="onCellTouchMove($event)"
+          @touchend.prevent="onCellTouchEnd($event)"
           @contextmenu.prevent
         >
           <span v-if="cell === 2" class="x-mark">✕</span>
