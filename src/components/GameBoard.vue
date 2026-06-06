@@ -283,7 +283,12 @@ const hintFontSize = computed(() => {
   const fontSizePx = Math.min(colFontSize, rowFontSize)
   const fontSizeRem = fontSizePx / 16
 
-  return Math.max(0.6, Math.min(1.0, fontSizeRem))
+  let finalSize = Math.max(0.6, Math.min(1.0, fontSizeRem))
+  // 缩小时额外减小 0.05rem
+  if (finalSize < 1.0) {
+    finalSize = Math.max(0.6, finalSize - 0.05)
+  }
+  return finalSize
 })
 
 /**
