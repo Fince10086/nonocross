@@ -9,12 +9,14 @@ import GameControls from "./components/GameControls.vue";
 import PuzzleSelector from "./components/PuzzleSelector.vue";
 import FavoritesPanel from "./components/FavoritesPanel.vue";
 import ImportModal from "./components/ImportModal.vue";
+import HelpModal from "./components/HelpModal.vue";
 
 const timer = useTimer();
 const favorites = useFavorites();
 const game = useGame(timer, favorites);
 
 const showImportDialog = ref(false);
+const showHelpDialog = ref(false);
 const showExportToast = ref(false);
 const importModalRef = ref(null);
 
@@ -28,6 +30,14 @@ function handleTogglePause() {
 
 function handleShowImport() {
     showImportDialog.value = true;
+}
+
+function handleShowHelp() {
+    showHelpDialog.value = true;
+}
+
+function handleCloseHelp() {
+    showHelpDialog.value = false;
 }
 
 function handleCloseImport() {
@@ -177,6 +187,7 @@ onUnmounted(() => {
             @delete-from-favorites="handleDeleteFromFavorites"
             @select-star="game.selectStar"
             @select-bank-puzzle="game.selectBankPuzzle"
+            @show-help="handleShowHelp"
         />
 
         <FavoritesPanel
@@ -192,6 +203,11 @@ onUnmounted(() => {
             :show="showImportDialog"
             @close="handleCloseImport"
             @import="handleImportPuzzle"
+        />
+
+        <HelpModal
+            :show="showHelpDialog"
+            @close="handleCloseHelp"
         />
 
         <!-- 完成提示 -->

@@ -26,6 +26,7 @@ const emit = defineEmits([
   'deleteFromFavorites',
   'selectStar',
   'selectBankPuzzle',
+  'showHelp',
 ])
 </script>
 
@@ -77,6 +78,7 @@ const emit = defineEmits([
           </option>
         </select>
       </div>
+      <button class="help-btn" @click="$emit('showHelp')" title="Help">?</button>
     </div>
 
     <!-- Row 3: Import / Export / Save / Delete -->
@@ -168,5 +170,34 @@ const emit = defineEmits([
   border: 2px solid #000;
   background: #fff;
   cursor: pointer;
+}
+
+.help-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #000;
+  background: #fff;
+  color: #000;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.help-btn:hover {
+  background: #f0f0f0;
+}
+
+@media (max-width: 600px) {
+  .help-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 0.875rem;
+  }
 }
 </style>
