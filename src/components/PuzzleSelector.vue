@@ -43,35 +43,6 @@ function formatStars(rating) {
         15×15
       </button>
     </div>
-
-    <div v-if="puzzleBankLoaded" class="picker-group">
-      <select
-        class="puzzle-select"
-        :value="selectedStar"
-        @change="$emit('selectStar', parseFloat($event.target.value))"
-      >
-        <option
-          v-for="star in availableStars"
-          :key="star"
-          :value="star"
-        >
-          {{ formatStars(star) }}
-        </option>
-      </select>
-      <select
-        class="puzzle-select"
-        :value="currentPuzzleId || ''"
-        @change="$emit('selectBankPuzzle', puzzlesForStar.find((p) => p.id === $event.target.value))"
-      >
-        <option
-          v-for="p in puzzlesForStar"
-          :key="p.id"
-          :value="p.id"
-        >
-          {{ p.id }}
-        </option>
-      </select>
-    </div>
   </div>
 </template>
 

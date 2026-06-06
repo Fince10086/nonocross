@@ -152,15 +152,8 @@ onUnmounted(() => {
                 {{ game.currentStars }}
             </div>
             <PuzzleSelector
-                :puzzle-bank-loaded="game.puzzleBankLoaded.value"
-                :selected-star="game.selectedStar.value"
-                :available-stars="game.availableStars.value"
-                :puzzles-for-star="game.puzzlesForStar.value"
-                :current-puzzle-id="game.currentPuzzleId.value"
                 :current-size="game.currentSize.value"
                 @change-size="game.changeSize"
-                @select-star="game.selectStar"
-                @select-bank-puzzle="game.selectBankPuzzle"
             />
         </div>
 
@@ -190,6 +183,11 @@ onUnmounted(() => {
             :is-generating="game.isGenerating.value"
             :current-solution="game.currentSolution.value"
             :is-in-favorites="isInFavoritesComputed"
+            :puzzle-bank-loaded="game.puzzleBankLoaded.value"
+            :selected-star="game.selectedStar.value"
+            :available-stars="game.availableStars.value"
+            :puzzles-for-star="game.puzzlesForStar.value"
+            :current-puzzle-id="game.currentPuzzleId.value"
             @toggle-pause="handleTogglePause"
             @undo="game.undo"
             @restart="game.restart"
@@ -198,6 +196,8 @@ onUnmounted(() => {
             @export-puzzle="handleExportPuzzle"
             @save-current-puzzle="handleSaveCurrentPuzzle"
             @delete-from-favorites="handleDeleteFromFavorites"
+            @select-star="game.selectStar"
+            @select-bank-puzzle="game.selectBankPuzzle"
         />
 
         <FavoritesPanel

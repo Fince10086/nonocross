@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { CELL_SIZE, HINT_AREA_SIZE } from '../constants.js'
 
 const props = defineProps({
@@ -245,12 +245,62 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('resize', updateSize)
 })
+
+/**
+ * 计算统一的 hint 字体大小
+ * 根据 hint 区域尺寸和所有提示中数字最多的那个，
+ * 动态调整到 [0.6rem, 1.0rem] 范围内，不超出边框
+ */
+const hintFontSize = computed(() => {
+  if (!props.currentColHints || !props.currentRowHints) return 0.75
+
+  const maxColCount = Math.max(0, ...props.currentColHints.map((h) => h.length))
+  const maxRowCount = Math.max(0, ...props.currentRowHints.map((h) => h.length))
+  const maxCount = Math.max(maxColCount, maxRowCount)
+
+  if (maxCount === 0) return 1
+
+  const hintH = parseInt(hintAreaSize.value, 10)
+
+  // 列提示（垂直堆叠）
+  const colGap = isCompact.value ? 1 : 2
+  const colPadding = isCompact.value ? 2 : 4
+  const colAvailable = hintH - colPadding
+  const colFontSize =
+    maxColCount > 0
+      ? (colAvailable - (maxColCount - 1) * colGap) / maxColCount
+      : Infinity
+
+  // 行提示（水平排列），数字平均宽度系数 0.7
+  const rowGap = isCompact.value ? 3 : 6
+  const rowPadding = isCompact.value ? 4 : 8
+  const rowAvailable = hintH - rowPadding
+  const rowFontSize =
+    maxRowCount > 0
+      ? (rowAvailable - (maxRowCount - 1) * rowGap) / (maxRowCount * 0.7)
+      : Infinity
+
+  const fontSizePx = Math.min(colFontSize, rowFontSize)
+  const fontSizeRem = fontSizePx / 16
+
+  return Math.max(0.6, Math.min(1.0, fontSizeRem))
+})
+
+/**
+ * 棋盘 CSS 变量
+ */
+const boardVars = computed(() => {
+  return {
+    '--hint-font-size': `${hintFontSize.value}rem`,
+  }
+})
 </script>
 
 <template>
   <div
     class="board-wrapper"
     :class="{ complete: isComplete, 'compact-hints': isCompact }"
+    :style="boardVars"
     @touchcancel="onStopDragging"
   >
     <!-- 左上角间隔区（模式切换） -->
@@ -437,7 +487,7 @@ onUnmounted(() => {
 }
 
 .hint-num {
-  font-size: 1rem;
+  font-size: var(--hint-font-size);
   font-weight: 600;
   line-height: 1;
   transition: opacity 0.15s ease;
@@ -552,10 +602,6 @@ onUnmounted(() => {
 }
 
 /* 紧凑模式：只在 hint 区域被显著压缩时启用 */
-.board-wrapper.compact-hints .hint-num {
-  font-size: 0.65rem;
-}
-
 .board-wrapper.compact-hints .col-hint {
   gap: 1px;
   padding-bottom: 2px;

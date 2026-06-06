@@ -6,6 +6,11 @@ const props = defineProps({
   isGenerating: { type: Boolean, default: false },
   currentSolution: { type: Array, default: null },
   isInFavorites: { type: Boolean, default: false },
+  puzzleBankLoaded: { type: Boolean, default: false },
+  selectedStar: { type: Number, default: 1 },
+  availableStars: { type: Array, default: () => [] },
+  puzzlesForStar: { type: Array, default: () => [] },
+  currentPuzzleId: { type: String, default: null },
 })
 
 const emit = defineEmits([
@@ -17,7 +22,16 @@ const emit = defineEmits([
   'exportPuzzle',
   'saveCurrentPuzzle',
   'deleteFromFavorites',
+  'selectStar',
+  'selectBankPuzzle',
 ])
+
+function formatStars(rating) {
+  const full = Math.floor(rating)
+  const half = rating % 1 === 0.5
+  const empty = 5 - full - (half ? 1 : 0)
+  return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(empty)
+}
 </script>
 
 <template>
@@ -43,6 +57,30 @@ const emit = defineEmits([
         >
           {{ isGenerating ? 'Generating...' : 'New Random' }}
         </button>
+      </div>
+    </div>
+
+    <!-- Row 2: Puzzle Picker -->
+    <div v-if="puzzleBankLoaded" class="controls-row">
+      <div class="picker-group">
+        <select
+          class="puzzle-select"
+          :value="selectedStar"
+          @change="$emit('selectStar', parseFloat($event.target.value))"
+        >
+          <option v-for="star in availableStars" :key="star" :value="star">
+            {{ formatStars(star) }}
+          </option>
+        </select>
+        <select
+          class="puzzle-select"
+          :value="currentPuzzleId || ''"
+          @change="$emit('selectBankPuzzle', puzzlesForStar.find((p) => p.id === $event.target.value))"
+        >
+          <option v-for="p in puzzlesForStar" :key="p.id" :value="p.id">
+            {{ p.id }}
+          </option>
+        </select>
       </div>
     </div>
 
@@ -111,5 +149,29 @@ const emit = defineEmits([
 .action-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.picker-group {
+  display: flex;
+  gap: 0;
+  border: 2px solid #000;
+}
+
+.picker-group .puzzle-select {
+  border: none;
+  border-right: 2px solid #000;
+}
+
+.picker-group .puzzle-select:last-child {
+  border-right: none;
+}
+
+.puzzle-select {
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 2px solid #000;
+  background: #fff;
+  cursor: pointer;
 }
 </style>
