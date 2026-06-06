@@ -27,6 +27,7 @@ const emit = defineEmits([
   'selectStar',
   'selectBankPuzzle',
   'showHelp',
+  'showAssist',
 ])
 </script>
 
@@ -79,6 +80,7 @@ const emit = defineEmits([
         </select>
       </div>
       <button class="btn btn-icon" @click="$emit('showHelp')" title="Help">?</button>
+      <button class="btn btn-icon" @click="$emit('showAssist')" title="Assist">&#9881;</button>
     </div>
 
     <!-- Row 3: Import / Export / Save / Delete -->

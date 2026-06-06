@@ -9,6 +9,10 @@ const props = defineProps({
   currentRowHints: { type: Array, default: null },
   colHintDetermined: { type: Array, default: () => [] },
   rowHintDetermined: { type: Array, default: () => [] },
+  rowHintConflict: { type: Array, default: () => [] },
+  colHintConflict: { type: Array, default: () => [] },
+  rowHintDerivable: { type: Array, default: () => [] },
+  colHintDerivable: { type: Array, default: () => [] },
   isComplete: { type: Boolean, default: false },
   isPaused: { type: Boolean, default: false },
   mode: { type: String, required: true },
@@ -334,6 +338,8 @@ const boardVars = computed(() => {
           class="hint-num"
           :class="{
             'hint-determined': colHintDetermined[c]?.has(i),
+            'hint-conflict': colHintConflict[c],
+            'hint-derivable': !colHintConflict[c] && colHintDerivable[c],
           }"
         >
           {{ n }}
@@ -355,6 +361,8 @@ const boardVars = computed(() => {
           class="hint-num"
           :class="{
             'hint-determined': rowHintDetermined[r]?.has(i),
+            'hint-conflict': rowHintConflict[r],
+            'hint-derivable': !rowHintConflict[r] && rowHintDerivable[r],
           }"
           >{{ n }}</span
         >
@@ -501,11 +509,20 @@ const boardVars = computed(() => {
   font-size: var(--hint-font-size);
   font-weight: 600;
   line-height: 1;
-  transition: opacity 0.15s ease;
+  transition: opacity 0.15s ease, color 0.15s ease;
 }
 
 .hint-determined {
-  color: #bbb;
+  opacity: 0.35;
+}
+
+.hint-conflict {
+  color: #c62828;
+  opacity: 1;
+}
+
+.hint-derivable {
+  color: #1976d2;
 }
 
 .grid {

@@ -10,6 +10,7 @@ import PuzzleSelector from "./components/PuzzleSelector.vue";
 import FavoritesPanel from "./components/FavoritesPanel.vue";
 import ImportModal from "./components/ImportModal.vue";
 import HelpModal from "./components/HelpModal.vue";
+import AssistModal from "./components/AssistModal.vue";
 
 const timer = useTimer();
 const favorites = useFavorites();
@@ -17,6 +18,7 @@ const game = useGame(timer, favorites);
 
 const showImportDialog = ref(false);
 const showHelpDialog = ref(false);
+const showAssistDialog = ref(false);
 const showExportToast = ref(false);
 const importModalRef = ref(null);
 
@@ -38,6 +40,18 @@ function handleShowHelp() {
 
 function handleCloseHelp() {
     showHelpDialog.value = false;
+}
+
+function handleShowAssist() {
+    showAssistDialog.value = true;
+}
+
+function handleCloseAssist() {
+    showAssistDialog.value = false;
+}
+
+function handleToggleAssist(key, value) {
+    game.toggleAssistSetting(key, value);
 }
 
 function handleCloseImport() {
@@ -152,6 +166,10 @@ onUnmounted(() => {
             :current-row-hints="game.currentRowHints.value"
             :col-hint-determined="game.colHintDetermined.value"
             :row-hint-determined="game.rowHintDetermined.value"
+            :row-hint-conflict="game.rowHintConflict.value"
+            :col-hint-conflict="game.colHintConflict.value"
+            :row-hint-derivable="game.rowHintDerivable.value"
+            :col-hint-derivable="game.colHintDerivable.value"
             :is-complete="game.isComplete.value"
             :is-paused="timer.isPaused.value"
             :mode="game.mode.value"
@@ -188,6 +206,7 @@ onUnmounted(() => {
             @select-star="game.selectStar"
             @select-bank-puzzle="game.selectBankPuzzle"
             @show-help="handleShowHelp"
+            @show-assist="handleShowAssist"
         />
 
         <FavoritesPanel
@@ -208,6 +227,13 @@ onUnmounted(() => {
         <HelpModal
             :show="showHelpDialog"
             @close="handleCloseHelp"
+        />
+
+        <AssistModal
+            :show="showAssistDialog"
+            :settings="game.assistSettings.value"
+            @close="handleCloseAssist"
+            @toggle="handleToggleAssist"
         />
 
         <!-- 完成提示 -->

@@ -9,6 +9,7 @@ import {
 import { getDeterminedHints } from '../hints.js'
 import { formatStars } from '../utils.js'
 import { generatePuzzleAsync } from '../generator.js'
+import { hasConflict, hasDerivable, autoMarkCompleted } from '../features/assist.js'
 import {
   CELL_STATE,
   MODE,
@@ -59,6 +60,90 @@ export function useGame(timer, favorites) {
   // 键盘选中格子
   const selectedCell = ref(null)
 
+  // 辅助功能设置
+  const assistSettings = ref({
+    autoMark: false,
+    conflictDetect: false,
+    derivableHint: false,
+  })
+
+  // 辅助功能计算结果
+  const rowHintConflict = ref([])
+  const colHintConflict = ref([])
+  const rowHintDerivable = ref([])
+  const colHintDerivable = ref([])
+
+  // 加载本地存储的辅助设置
+  function loadAssistSettings() {
+    try {
+      const raw = localStorage.getItem('nonocross-assist')
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        assistSettings.value = { ...assistSettings.value, ...parsed }
+      }
+    } catch (e) {
+      console.error('加载辅助设置失败:', e)
+    }
+  }
+
+  // 保存辅助设置
+  function saveAssistSettings() {
+    try {
+      localStorage.setItem('nonocross-assist', JSON.stringify(assistSettings.value))
+    } catch (e) {
+      console.error('保存辅助设置失败:', e)
+    }
+  }
+
+  // 更新辅助功能状态
+  function updateAssistState() {
+    if (!assistSettings.value.conflictDetect && !assistSettings.value.derivableHint) return
+    if (!currentRowHints.value || !currentColHints.value) return
+
+    const size = currentSize.value
+
+    if (assistSettings.value.conflictDetect) {
+      rowHintConflict.value = currentRowHints.value.map((hints, r) => {
+        const state = grid.value[r].map(gridToSolverState)
+        return hasConflict(state, hints)
+      })
+      colHintConflict.value = currentColHints.value.map((hints, c) => {
+        const state = grid.value.map((row) => gridToSolverState(row[c]))
+        return hasConflict(state, hints)
+      })
+    }
+
+    if (assistSettings.value.derivableHint) {
+      rowHintDerivable.value = currentRowHints.value.map((hints, r) => {
+        const state = grid.value[r].map(gridToSolverState)
+        return hasDerivable(state, hints)
+      })
+      colHintDerivable.value = currentColHints.value.map((hints, c) => {
+        const state = grid.value.map((row) => gridToSolverState(row[c]))
+        return hasDerivable(state, hints)
+      })
+    }
+  }
+
+  // 执行自动标记
+  function runAutoMark() {
+    if (!assistSettings.value.autoMark) return
+    if (!currentRowHints.value || !currentColHints.value) return
+
+    const { changes, grid: newGrid } = autoMarkCompleted(
+      grid.value,
+      currentRowHints.value,
+      currentColHints.value,
+      getDeterminedHints,
+    )
+
+    if (changes.length > 0) {
+      grid.value = newGrid
+      // 更新所有受影响的行列的 determined 状态
+      initHintDetermined()
+    }
+  }
+
   /**
    * 创建空网格
    * @param {number} size - 网格大小
@@ -106,6 +191,8 @@ export function useGame(timer, favorites) {
       const state = grid.value.map((row) => gridToSolverState(row[c]))
       return getDeterminedHints(state, hints)
     })
+    updateAssistState()
+    runAutoMark()
   }
 
   /**
@@ -126,6 +213,9 @@ export function useGame(timer, favorites) {
     const colState = grid.value.map((row) => gridToSolverState(row[c]))
     newColHints[c] = getDeterminedHints(colState, currentColHints.value[c])
     colHintDetermined.value = newColHints
+
+    updateAssistState()
+    runAutoMark()
   }
 
   // 当前尺寸的所有谜题
@@ -284,6 +374,26 @@ export function useGame(timer, favorites) {
     }
 
     initHintDetermined()
+  }
+
+  /**
+   * 切换辅助功能设置
+   * @param {string} key - 设置键名
+   * @param {boolean} value - 新值
+   */
+  function toggleAssistSetting(key, value) {
+    if (key in assistSettings.value) {
+      assistSettings.value[key] = value
+      saveAssistSettings()
+      if (value) {
+        // 开启时立即更新
+        updateAssistState()
+        if (key === 'autoMark') {
+          pushHistory()
+          runAutoMark()
+        }
+      }
+    }
   }
 
   /**
@@ -812,6 +922,7 @@ export function useGame(timer, favorites) {
 
   // 初始化
   grid.value = createEmptyGrid(currentSize.value)
+  loadAssistSettings()
 
   return {
     // 状态
@@ -834,6 +945,13 @@ export function useGame(timer, favorites) {
     selectedStar,
     selectedCell,
 
+    // 辅助功能
+    assistSettings,
+    rowHintConflict,
+    colHintConflict,
+    rowHintDerivable,
+    colHintDerivable,
+
     // 计算属性
     puzzlesForSize,
     puzzlesForStar,
@@ -849,6 +967,7 @@ export function useGame(timer, favorites) {
     restart,
     undo,
     toggleMode,
+    toggleAssistSetting,
     cellMouseDown,
     cellMouseEnter,
     cellTouchStart,

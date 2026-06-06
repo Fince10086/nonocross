@@ -79,7 +79,7 @@ export function getLinePossibilities(hints, size) {
  * @param {Hints} hints - 提示数字
  * @returns {KnownLine} 推导后的状态行
  */
-function determineLine(known, hints) {
+export function determineLine(known, hints) {
   const possibilities = getLinePossibilities(hints, known.length)
 
   const valid = possibilities.filter(p => {
