@@ -375,6 +375,12 @@ export function getDeterminedHints(state, hints) {
     }
 
     if (allFilled) {
+      // 只有一个合法解时，提示位置完全确定，直接变灰
+      if (valid.length === 1) {
+        determined.add(h)
+        continue
+      }
+
       // 单行只有一个提示时，只要填满就直接变灰
       if (hints.length === 1) {
         determined.add(h)
