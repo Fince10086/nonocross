@@ -38,6 +38,9 @@ export function useGame(timer, favorites) {
   const dragValue = ref(null)
   const ctrlDown = ref(false)
 
+  // 键盘拖拽状态
+  const keyDragValue = ref(null)
+
   const currentSolution = ref(null)
   const currentRowHints = ref(null)
   const currentColHints = ref(null)
@@ -635,6 +638,11 @@ export function useGame(timer, favorites) {
       case 'right': c = (c + 1) % size; break
     }
     selectedCell.value = { r, c }
+
+    // 键盘拖拽中：自动填充新位置（与鼠标拖拽逻辑一致）
+    if (keyDragValue.value !== null) {
+      applyKeyDragToCell(r, c)
+    }
   }
 
   /**
@@ -654,6 +662,42 @@ export function useGame(timer, favorites) {
     checkComplete()
     timer.start()
     return true
+  }
+
+  /**
+   * 应用键盘拖拽值到指定格子（与鼠标拖拽逻辑一致）
+   * @param {number} r - 行索引
+   * @param {number} c - 列索引
+   */
+  function applyKeyDragToCell(r, c) {
+    if (keyDragValue.value === CELL_STATE.EMPTY) {
+      if (grid.value[r][c] !== CELL_STATE.EMPTY) {
+        grid.value[r][c] = CELL_STATE.EMPTY
+        updateHintDetermined(r, c)
+      }
+    } else if (grid.value[r][c] === CELL_STATE.EMPTY) {
+      grid.value[r][c] = keyDragValue.value
+      updateHintDetermined(r, c)
+    }
+  }
+
+  /**
+   * 开始键盘拖拽
+   * @param {number} targetState - 目标状态（FILLED 或 MARKED）
+   */
+  function startKeyDrag(targetState) {
+    if (isComplete.value) return
+    if (!selectedCell.value) {
+      selectedCell.value = { r: 0, c: 0 }
+    }
+    const { r, c } = selectedCell.value
+    const currentVal = grid.value[r][c]
+    keyDragValue.value = currentVal === targetState ? CELL_STATE.EMPTY : targetState
+    pushHistory()
+    grid.value[r][c] = keyDragValue.value
+    updateHintDetermined(r, c)
+    checkComplete()
+    timer.start()
   }
 
   /**
@@ -715,13 +759,17 @@ export function useGame(timer, favorites) {
       case 'f':
       case 'F':
         e.preventDefault()
-        actOnSelectedCell(CELL_STATE.FILLED)
+        if (!e.repeat) {
+          startKeyDrag(CELL_STATE.FILLED)
+        }
         break
 
       case 'x':
       case 'X':
         e.preventDefault()
-        actOnSelectedCell(CELL_STATE.MARKED)
+        if (!e.repeat) {
+          startKeyDrag(CELL_STATE.MARKED)
+        }
         break
 
       case 'p':
@@ -756,6 +804,9 @@ export function useGame(timer, favorites) {
         ctrlDown.value = false
         mode.value = mode.value === MODE.FILL ? MODE.X : MODE.FILL
       }
+    }
+    if (e.key === 'f' || e.key === 'F' || e.key === 'x' || e.key === 'X') {
+      keyDragValue.value = null
     }
   }
 
