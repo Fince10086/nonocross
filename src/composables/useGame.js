@@ -392,6 +392,16 @@ export function useGame(timer, favorites) {
           pushHistory()
           runAutoMark()
         }
+      } else {
+        // 关闭时清空对应状态
+        if (key === 'conflictDetect') {
+          rowHintConflict.value = []
+          colHintConflict.value = []
+        }
+        if (key === 'derivableHint') {
+          rowHintDerivable.value = []
+          colHintDerivable.value = []
+        }
       }
     }
   }
@@ -646,17 +656,11 @@ export function useGame(timer, favorites) {
   function changeSize(size) {
     currentSize.value = size
     restart()
-    // 自动选择当前尺寸的第一个可用星级
-    const stars = [...new Set(puzzlesForSize.value.map((p) => p.stars))]
-    if (stars.length > 0) {
-      selectedStar.value = Math.min(...stars)
-      const puzzles = puzzlesForStar.value
-      const puzzle = pickRandomPuzzle(puzzles)
-      if (puzzle) {
-        selectBankPuzzle(puzzle)
-      } else {
-        generateNewPuzzle()
-      }
+    const allPuzzles = puzzlesForSize.value
+    if (allPuzzles.length > 0) {
+      const puzzle = pickRandomPuzzle(allPuzzles)
+      selectedStar.value = puzzle.stars
+      selectBankPuzzle(puzzle)
     } else {
       generateNewPuzzle()
     }

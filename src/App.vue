@@ -125,18 +125,11 @@ onMounted(() => {
     window.addEventListener("keyup", handleKeyUp);
     favorites.loadFavorites();
     game.loadPuzzleBank().then(() => {
-        const stars = [
-            ...new Set(game.puzzlesForSize.value.map((p) => p.stars)),
-        ];
-        if (stars.length > 0) {
-            game.selectedStar.value = Math.min(...stars);
-            const puzzles = game.puzzlesForStar.value;
-            const randomPuzzle = puzzles[Math.floor(Math.random() * puzzles.length)];
-            if (randomPuzzle) {
-                game.selectBankPuzzle(randomPuzzle);
-            } else {
-                game.generateNewPuzzle();
-            }
+        const allPuzzles = game.puzzlesForSize.value;
+        if (allPuzzles.length > 0) {
+            const randomPuzzle = allPuzzles[Math.floor(Math.random() * allPuzzles.length)];
+            game.selectedStar.value = randomPuzzle.stars;
+            game.selectBankPuzzle(randomPuzzle);
         } else {
             game.generateNewPuzzle();
         }
@@ -187,6 +180,11 @@ onUnmounted(() => {
             @toggle-mode="game.toggleMode"
             @resume="timer.resume"
         />
+
+        <!-- 完成提示 -->
+        <div v-if="game.isComplete.value" class="message">
+            {{ t('completed', { time: timer.formattedTime.value }) }}
+        </div>
 
         <GameControls
             :is-paused="timer.isPaused.value"
@@ -241,11 +239,6 @@ onUnmounted(() => {
             @close="handleCloseAssist"
             @toggle="handleToggleAssist"
         />
-
-        <!-- 完成提示 -->
-        <div v-if="game.isComplete.value" class="message">
-            {{ t('completed', { time: timer.formattedTime }) }}
-        </div>
     </div>
 </template>
 

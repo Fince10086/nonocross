@@ -20,7 +20,7 @@ export function getDeterminedHints(state, hints) {
 
   // 全空行特殊情况
   if (hints.length === 1 && hints[0] === 0) {
-    return new Set()
+    return new Set([0])
   }
 
   // 获取所有可能的合法排列
