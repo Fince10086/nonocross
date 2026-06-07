@@ -9,6 +9,7 @@ const props = defineProps({
   completedCount: { type: Number, default: 0 },
   unlockedMax: { type: Number, default: 10 },
   records: { type: Array, default: () => [] },
+  puzzleBank: { type: Array, default: () => [] },
 })
 
 const emit = defineEmits(['selectLevel', 'close'])
@@ -96,6 +97,13 @@ const pageButtons = computed(() => {
 function formatLevelStars(stars) {
   return stars ? '★' + stars : ''
 }
+
+function getLevelSolution(level) {
+  const info = getLevelInfo(level)
+  if (!info || !info.puzzleId) return null
+  const puzzle = props.puzzleBank.find(p => `${p.size}-${p.id}` === info.puzzleId)
+  return puzzle ? puzzle.solution : null
+}
 </script>
 
 <template>
@@ -121,6 +129,31 @@ function formatLevelStars(stars) {
           }"
           @click="handleSelect(level)"
         >
+          <!-- 已完成关卡的图案背景 -->
+          <div
+            v-if="isCompleted(level)"
+            class="level-pattern"
+            :style="{
+              gridTemplateColumns: 'repeat(' + (getLevelSolution(level)?.length || 0) + ', 1fr)',
+              gridTemplateRows: 'repeat(' + (getLevelSolution(level)?.length || 0) + ', 1fr)',
+            }"
+          >
+            <template v-if="getLevelSolution(level)">
+              <div
+                v-for="(row, r) in getLevelSolution(level)"
+                :key="'r'+r"
+                class="pattern-row"
+              >
+                <div
+                  v-for="(cell, c) in row"
+                  :key="'c'+c"
+                  class="pattern-cell"
+                  :class="{ filled: cell === 1 }"
+                />
+              </div>
+            </template>
+          </div>
+
           <div class="level-main">
             <span class="level-number">{{ level }}</span>
             <span v-if="!isUnlocked(level)" class="level-lock">●</span>
@@ -201,6 +234,7 @@ function formatLevelStars(stars) {
   padding: 4px;
   aspect-ratio: 1;
   text-align: center;
+  position: relative;
 }
 
 .level-cell:hover:not(.locked) {
@@ -269,6 +303,36 @@ function formatLevelStars(stars) {
 .assist-mark {
   color: #ff9800;
   font-weight: 700;
+}
+
+.level-pattern {
+  position: absolute;
+  inset: 0px;
+  display: grid;
+  opacity: 0.25;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.pattern-row {
+  display: contents;
+}
+
+.pattern-cell {
+  width: 100%;
+  height: 100%;
+}
+
+.pattern-cell.filled {
+  background: #bbb;
+  border-radius: 0.5px;
+}
+
+.level-main,
+.level-meta,
+.level-record {
+  position: relative;
+  z-index: 1;
 }
 
 .modal-footer {

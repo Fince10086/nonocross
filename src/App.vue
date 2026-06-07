@@ -325,7 +325,8 @@ onUnmounted(() => {
             :completed-count="levels.completedCount.value"
             :unlocked-max="levels.unlockedMax.value"
             :records="levels.records.value"
-                @close="showLevelSelect = false"
+            :puzzle-bank="game.puzzleBank.value"
+            @close="showLevelSelect = false"
             @select-level="handleSelectLevel"
         />
     </div>
