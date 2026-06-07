@@ -77,9 +77,24 @@ export const MOUSE_BUTTON = {
   RIGHT: 2,
 }
 
-// 关卡系统
-export const LEVEL_PHASES = {
-  EARLY: { start: 1, end: 167, sizeWeights: { 5: 0.85, 10: 0.15, 15: 0 } },
-  MID: { start: 168, end: 334, sizeWeights: { 5: 0.50, 10: 0.40, 15: 0.10 } },
-  LATE: { start: 335, end: 500, sizeWeights: { 5: 0.15, 10: 0.45, 15: 0.40 } },
+/**
+ * 将游戏网格状态转换为求解器状态
+ * @param {number} val - 单元格值 (CELL_STATE)
+ * @returns {number|null} 求解器状态 (1=填充, 0=空, null=未知)
+ */
+export function toSolverState(val) {
+  if (val === CELL_STATE.FILLED) return 1
+  if (val === CELL_STATE.MARKED) return 0
+  return null
+}
+
+/**
+ * 将求解器状态转换为游戏网格状态
+ * @param {number|null} val - 求解器状态
+ * @returns {number} 游戏网格状态
+ */
+export function fromSolverState(val) {
+  if (val === 1) return CELL_STATE.FILLED
+  if (val === 0) return CELL_STATE.MARKED
+  return CELL_STATE.EMPTY
 }

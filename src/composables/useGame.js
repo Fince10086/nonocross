@@ -5,11 +5,13 @@ import {
   sweepsToStars,
   decodePuzzle,
   encodePuzzle,
+  getHintsFromSolution,
 } from '../solver.js'
 import { getDeterminedHints } from '../hints.js'
 import { formatStars } from '../utils.js'
 import { generatePuzzleAsync } from '../generator.js'
 import { hasConflict, hasDerivable, autoMarkCompleted } from '../features/assist.js'
+import { storageGet, storageSet } from '../storage.js'
 import {
   CELL_STATE,
   MODE,
@@ -19,6 +21,7 @@ import {
   CELL_SIZE,
   HINT_AREA_SIZE,
   STAR_RATINGS,
+  toSolverState,
 } from '../constants.js'
 
 /**
@@ -29,28 +32,21 @@ import {
  * @returns {object} 游戏状态和操作方法
  */
 const FREE_SIZE_KEY = 'nonocross-free-size'
+const ASSIST_KEY = 'nonocross-assist'
 
 function loadFreeSize() {
-  try {
-    const raw = localStorage.getItem(FREE_SIZE_KEY)
-    if (raw) {
-      const size = parseInt(raw, 10)
-      if ([GRID_SIZE.SMALL, GRID_SIZE.MEDIUM, GRID_SIZE.LARGE].includes(size)) {
-        return size
-      }
+  const raw = storageGet(FREE_SIZE_KEY)
+  if (raw !== null) {
+    const size = parseInt(raw, 10)
+    if ([GRID_SIZE.SMALL, GRID_SIZE.MEDIUM, GRID_SIZE.LARGE].includes(size)) {
+      return size
     }
-  } catch (e) {
-    console.error('Failed to load free mode size:', e)
   }
   return GRID_SIZE.MEDIUM
 }
 
 function saveFreeSize(size) {
-  try {
-    localStorage.setItem(FREE_SIZE_KEY, String(size))
-  } catch (e) {
-    console.error('Failed to save free mode size:', e)
-  }
+  storageSet(FREE_SIZE_KEY, String(size))
 }
 
 export function useGame(timer, favorites) {
@@ -109,24 +105,15 @@ export function useGame(timer, favorites) {
 
   // 加载本地存储的辅助设置
   function loadAssistSettings() {
-    try {
-      const raw = localStorage.getItem('nonocross-assist')
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        assistSettings.value = { ...assistSettings.value, ...parsed }
-      }
-    } catch (e) {
-      console.error('加载辅助设置失败:', e)
+    const parsed = storageGet(ASSIST_KEY)
+    if (parsed) {
+      assistSettings.value = { ...assistSettings.value, ...parsed }
     }
   }
 
   // 保存辅助设置
   function saveAssistSettings() {
-    try {
-      localStorage.setItem('nonocross-assist', JSON.stringify(assistSettings.value))
-    } catch (e) {
-      console.error('保存辅助设置失败:', e)
-    }
+    storageSet(ASSIST_KEY, assistSettings.value)
   }
 
   // 更新辅助功能状态
@@ -138,22 +125,22 @@ export function useGame(timer, favorites) {
 
     if (assistSettings.value.conflictDetect) {
       rowHintConflict.value = currentRowHints.value.map((hints, r) => {
-        const state = grid.value[r].map(gridToSolverState)
+        const state = grid.value[r].map(toSolverState)
         return hasConflict(state, hints)
       })
       colHintConflict.value = currentColHints.value.map((hints, c) => {
-        const state = grid.value.map((row) => gridToSolverState(row[c]))
+        const state = grid.value.map((row) => toSolverState(row[c]))
         return hasConflict(state, hints)
       })
     }
 
     if (assistSettings.value.derivableHint) {
       rowHintDerivable.value = currentRowHints.value.map((hints, r) => {
-        const state = grid.value[r].map(gridToSolverState)
+        const state = grid.value[r].map(toSolverState)
         return hasDerivable(state, hints)
       })
       colHintDerivable.value = currentColHints.value.map((hints, c) => {
-        const state = grid.value.map((row) => gridToSolverState(row[c]))
+        const state = grid.value.map((row) => toSolverState(row[c]))
         return hasDerivable(state, hints)
       })
     }
@@ -188,17 +175,6 @@ export function useGame(timer, favorites) {
     return Array.from({ length: size }, () => Array(size).fill(CELL_STATE.EMPTY))
   }
 
-  /**
-   * 将游戏网格状态转换为求解器状态
-   * @param {number} val - 单元格值
-   * @returns {number|null} 求解器状态
-   */
-  function gridToSolverState(val) {
-    if (val === CELL_STATE.FILLED) return 1
-    if (val === CELL_STATE.MARKED) return 0
-    return null
-  }
-
   // 已确定的行提示（增量更新，避免全量重算）
   const rowHintDetermined = ref([])
   const colHintDetermined = ref([])
@@ -219,11 +195,11 @@ export function useGame(timer, favorites) {
       return
     }
     rowHintDetermined.value = currentRowHints.value.map((hints, r) => {
-      const state = grid.value[r].map(gridToSolverState)
+      const state = grid.value[r].map(toSolverState)
       return getDeterminedHints(state, hints)
     })
     colHintDetermined.value = currentColHints.value.map((hints, c) => {
-      const state = grid.value.map((row) => gridToSolverState(row[c]))
+      const state = grid.value.map((row) => toSolverState(row[c]))
       return getDeterminedHints(state, hints)
     })
     updateAssistState()
@@ -240,12 +216,12 @@ export function useGame(timer, favorites) {
     // 确保坐标在当前 hints 范围内
     if (r >= currentRowHints.value.length || c >= currentColHints.value.length) return
     const newRowHints = [...rowHintDetermined.value]
-    const rowState = grid.value[r].map(gridToSolverState)
+    const rowState = grid.value[r].map(toSolverState)
     newRowHints[r] = getDeterminedHints(rowState, currentRowHints.value[r])
     rowHintDetermined.value = newRowHints
 
     const newColHints = [...colHintDetermined.value]
-    const colState = grid.value.map((row) => gridToSolverState(row[c]))
+    const colState = grid.value.map((row) => toSolverState(row[c]))
     newColHints[c] = getDeterminedHints(colState, currentColHints.value[c])
     colHintDetermined.value = newColHints
 
@@ -291,10 +267,7 @@ export function useGame(timer, favorites) {
     const { id, size, solution, sweeps } = result
     if (!id || sweeps === null || sweeps === undefined) return null
 
-    const rowHints = solution.map((row) => getHints(row))
-    const colHints = solution[0].map((_, colIndex) =>
-      getHints(solution.map((row) => row[colIndex])),
-    )
+    const { rowHints, colHints } = getHintsFromSolution(solution)
 
     const stars = sweepsToStars(sweeps, size)
     const starsText = formatStars(stars)
@@ -751,10 +724,7 @@ export function useGame(timer, favorites) {
     }
 
     const { size, solution, sweeps: encodedSweeps } = result
-    const rowHints = solution.map((row) => getHints(row))
-    const colHints = solution[0].map((_, colIndex) =>
-      getHints(solution.map((row) => row[colIndex])),
-    )
+    const { rowHints, colHints } = getHintsFromSolution(solution)
 
     let sweeps = encodedSweeps
     if (sweeps === null || sweeps === undefined) {

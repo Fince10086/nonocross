@@ -1,23 +1,13 @@
 <script setup>
 import { t } from '../i18n.js'
+import { formatTime as formatTimeFromSeconds } from '../utils.js'
+import { formatSavedTime } from '../composables/useFavorites.js'
 
 const props = defineProps({
   favorites: { type: Array, default: () => [] },
 })
 
-import { formatTime as formatTimeFromSeconds } from '../utils.js'
-
 const emit = defineEmits(['loadFavorite'])
-
-function formatSavedTime(isoString) {
-  if (!isoString) return ''
-  const d = new Date(isoString)
-  return (
-    d.toLocaleDateString() +
-    ' ' +
-    d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  )
-}
 </script>
 
 <template>

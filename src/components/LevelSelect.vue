@@ -41,10 +41,6 @@ function isUnlocked(level) {
   return level <= props.unlockedMax
 }
 
-function isLocked(level) {
-  return !isUnlocked(level)
-}
-
 function getRecord(level) {
   return props.records.find(r => r.level === level) || null
 }
@@ -60,10 +56,6 @@ function handleSelect(level) {
   if (isUnlocked(level)) {
     emit('selectLevel', level)
   }
-}
-
-function handleClose() {
-  emit('close')
 }
 
 function prevPage() {
@@ -101,21 +93,18 @@ const pageButtons = computed(() => {
   return buttons
 })
 
-function formatStars(stars) {
-  if (!stars) return ''
-  if (stars <= 2.5) return '★' + stars
-  if (stars <= 4) return '★' + stars
-  return '★' + stars
+function formatLevelStars(stars) {
+  return stars ? '★' + stars : ''
 }
 </script>
 
 <template>
-  <div v-if="show" class="modal-overlay" @click.self="handleClose">
-    <div class="modal">
+  <div v-if="show" class="modal-overlay" @click.self="$emit('close')">
+    <div class="modal level-modal">
       <div class="modal-header">
         <h3 class="modal-title">{{ t('levels') }}</h3>
         <div class="progress-info">
-          <span>{{ t('completed') }}: {{ completedCount }}/2700</span>
+          <span>{{ t('completedLabel') }}: {{ completedCount }}/2700</span>
         </div>
       </div>
 
@@ -137,7 +126,7 @@ function formatStars(stars) {
       </div>
 
       <!-- 关卡网格 -->
-      <div class="levels-grid">
+      <div class="levels-grid thin-scrollbar">
         <div
           v-for="level in pageLevels"
           :key="level"
@@ -145,17 +134,17 @@ function formatStars(stars) {
           :class="{
             completed: isCompleted(level),
             unlocked: isUnlocked(level) && !isCompleted(level),
-            locked: isLocked(level),
+            locked: !isUnlocked(level),
           }"
           @click="handleSelect(level)"
         >
           <div class="level-main">
             <span class="level-number">{{ level }}</span>
-            <span v-if="isLocked(level)" class="level-lock">●</span>
+            <span v-if="!isUnlocked(level)" class="level-lock">●</span>
           </div>
           <div v-if="getLevelInfo(level)" class="level-meta">
             <span class="level-size">{{ getLevelInfo(level).size }}×{{ getLevelInfo(level).size }}</span>
-            <span class="level-stars">{{ getLevelInfo(level).stars }}★</span>
+            <span class="level-stars">{{ formatLevelStars(getLevelInfo(level).stars) }}</span>
           </div>
           <div v-if="isCompleted(level)" class="level-record">
             ✓ {{ formatTime(getRecord(level).time) }}
@@ -165,35 +154,17 @@ function formatStars(stars) {
       </div>
 
       <div class="modal-actions">
-        <button class="btn" @click="handleClose">{{ t('close') }}</button>
+        <button class="btn" @click="$emit('close')">{{ t('close') }}</button>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.9);
-  z-index: 100;
-  padding: 20px;
-  box-sizing: border-box;
-}
-
-.modal {
-  background: #fff;
-  border: 2px solid #000;
-  border-radius: 4px;
-  padding: 24px;
+.level-modal {
   max-width: 720px;
   width: 100%;
   max-height: 85vh;
-  display: flex;
-  flex-direction: column;
   gap: 12px;
   overflow: hidden;
 }
@@ -203,12 +174,6 @@ function formatStars(stars) {
   justify-content: space-between;
   align-items: center;
   flex-shrink: 0;
-}
-
-.modal-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin: 0;
 }
 
 .progress-info {
@@ -237,23 +202,6 @@ function formatStars(stars) {
   overflow-x: hidden;
   padding: 4px;
   flex: 1;
-}
-
-.levels-grid::-webkit-scrollbar {
-  width: 3px;
-}
-
-.levels-grid::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.levels-grid::-webkit-scrollbar-thumb {
-  background: #000;
-  border-radius: 0;
-}
-
-.levels-grid::-webkit-scrollbar-thumb:hover {
-  background: #333;
 }
 
 .level-cell {
@@ -341,8 +289,6 @@ function formatStars(stars) {
 }
 
 .modal-actions {
-  display: flex;
   justify-content: center;
-  flex-shrink: 0;
 }
 </style>

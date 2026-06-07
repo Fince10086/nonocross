@@ -2,28 +2,10 @@
  * 关卡系统状态管理
  */
 import { ref, computed } from 'vue'
+import { storageGet, storageSet } from '../storage.js'
 
 const STORAGE_KEY = 'nonocross-levels'
 const MAX_LEVEL = 2700
-
-function loadFromStorage() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    return JSON.parse(raw)
-  } catch (e) {
-    console.error('Failed to load level progress:', e)
-    return null
-  }
-}
-
-function saveToStorage(data) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-  } catch (e) {
-    console.error('Failed to save level progress:', e)
-  }
-}
 
 export function useLevels() {
   const levelsData = ref(null)
@@ -60,17 +42,15 @@ export function useLevels() {
   
   // 加载进度
   function loadProgress() {
-    const saved = loadFromStorage()
+    const saved = storageGet(STORAGE_KEY)
     if (saved) {
       records.value = saved.records || []
     }
   }
-  
+
   // 保存进度
   function saveProgress() {
-    saveToStorage({
-      records: records.value,
-    })
+    storageSet(STORAGE_KEY, { records: records.value })
   }
   
   // 获取指定关卡信息

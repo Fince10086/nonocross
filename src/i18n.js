@@ -3,6 +3,7 @@
  * 支持英语、中文、日语
  */
 import { ref } from 'vue'
+import { storageGet, storageSet } from './storage.js'
 
 export const LANGUAGES = ['en', 'zh', 'ja']
 
@@ -29,6 +30,7 @@ const TRANSLATIONS = {
     markX: 'X',
     paused: 'PAUSED',
     completed: 'Completed in {time}',
+    completedLabel: 'Completed',
     importPuzzle: 'Import Puzzle',
     pasteCode: 'Paste the puzzle code below:',
     cancel: 'Cancel',
@@ -91,6 +93,7 @@ const TRANSLATIONS = {
     markX: 'X',
     paused: '\u5df2\u6682\u505c',
     completed: '\u7528\u65f6 {time} \u5b8c\u6210',
+    completedLabel: '\u5df2\u5b8c\u6210',
     importPuzzle: '\u5bfc\u5165\u8c1c\u9898',
     pasteCode: '\u5728\u4e0b\u65b9\u7c98\u8d34\u8c1c\u9898\u7f16\u7801\uff1a',
     cancel: '\u53d6\u6d88',
@@ -153,6 +156,7 @@ const TRANSLATIONS = {
     markX: 'X',
     paused: '\u4e00\u6642\u505c\u6b62\u4e2d',
     completed: '{time} \u3067\u5b8c\u6210\uff01',
+    completedLabel: '\u5b8c\u4e86',
     importPuzzle: '\u30d1\u30ba\u30eb\u3092\u30a4\u30f3\u30dd\u30fc\u30c8',
     pasteCode: '\u30d1\u30ba\u30eb\u30b3\u30fc\u30c9\u3092\u8cbc\u308a\u4ed8\u3051\u3066\u304f\u3060\u3055\u3044\uff1a',
     cancel: '\u30ad\u30e3\u30f3\u30bb\u30eb',
@@ -202,9 +206,9 @@ const TRANSLATIONS = {
 }
 
 function detectBrowserLang() {
-  const saved = localStorage.getItem('nonocross-lang')
+  const saved = storageGet('nonocross-lang')
   if (saved) return saved
-  
+
   const browserLang = navigator.language || navigator.userLanguage || 'en'
   if (browserLang.startsWith('zh')) return 'zh'
   if (browserLang.startsWith('ja')) return 'ja'
@@ -220,7 +224,7 @@ export const currentLang = ref(detectBrowserLang())
 export function setLang(lang) {
   if (LANGUAGES.includes(lang)) {
     currentLang.value = lang
-    localStorage.setItem('nonocross-lang', lang)
+    storageSet('nonocross-lang', lang)
   }
 }
 

@@ -84,3 +84,70 @@ body {
   position: relative;
   z-index: 1;
 }
+
+/* Modal 基础结构 */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.8);
+  z-index: 100;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.modal {
+  background: #fff;
+  border: 2px solid #000;
+  border-radius: 4px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* 自定义滚动条 */
+
+.thin-scrollbar::-webkit-scrollbar {
+  width: 3px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background: #000;
+  border-radius: 0;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #333;
+}
+
+/* 响应式 */
+
+@media (max-width: 600px) {
+  .modal-overlay {
+    padding: 12px;
+  }
+
+  .modal {
+    padding: 16px;
+  }
+}

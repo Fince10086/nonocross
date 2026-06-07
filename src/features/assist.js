@@ -3,6 +3,7 @@
  * 提供冲突检测、可推导提示和自动标记功能
  */
 import { getLinePossibilities, determineLine } from '../solver.js'
+import { toSolverState } from '../constants.js'
 
 /**
  * 检测某行/列是否存在冲突
@@ -56,19 +57,11 @@ export function autoMarkCompleted(grid, rowHints, colHints, getDeterminedHints) 
   const MAX_ITERATIONS = size * 2
 
   function getRowState(r) {
-    return newGrid[r].map((val) => {
-      if (val === 1) return 1
-      if (val === 2) return 0
-      return null
-    })
+    return newGrid[r].map(toSolverState)
   }
 
   function getColState(c) {
-    return newGrid.map((row) => {
-      if (row[c] === 1) return 1
-      if (row[c] === 2) return 0
-      return null
-    })
+    return newGrid.map((row) => toSolverState(row[c]))
   }
 
   while (changed && iterations < MAX_ITERATIONS) {

@@ -1,5 +1,6 @@
-import { ref, computed } from 'vue'
-import { encodePuzzle, decodePuzzle, getHints } from '../solver.js'
+import { ref } from 'vue'
+import { encodePuzzle, decodePuzzle, getHintsFromSolution } from '../solver.js'
+import { storageGet, storageSet } from '../storage.js'
 
 const FAVORITES_KEY = 'nonocross-favorites'
 const MAX_FAVORITES = 100
@@ -20,34 +21,20 @@ export function useFavorites() {
   const favorites = ref([])
 
   function loadFavorites() {
-    try {
-      const raw = localStorage.getItem(FAVORITES_KEY)
-      if (!raw) {
-        favorites.value = []
-        return
-      }
-      const parsed = JSON.parse(raw)
-      if (!Array.isArray(parsed)) {
-        favorites.value = []
-        return
-      }
-      const valid = parsed.filter(isValidFavorite)
-      if (valid.length !== parsed.length) {
-        console.warn(`Filtered out ${parsed.length - valid.length} invalid favorites`)
-      }
-      favorites.value = valid.slice(0, MAX_FAVORITES)
-    } catch (e) {
-      console.error('Failed to load favorites:', e)
+    const parsed = storageGet(FAVORITES_KEY, [])
+    if (!Array.isArray(parsed)) {
       favorites.value = []
+      return
     }
+    const valid = parsed.filter(isValidFavorite)
+    if (valid.length !== parsed.length) {
+      console.warn(`Filtered out ${parsed.length - valid.length} invalid favorites`)
+    }
+    favorites.value = valid.slice(0, MAX_FAVORITES)
   }
 
   function saveFavorites() {
-    try {
-      localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites.value.slice(0, MAX_FAVORITES)))
-    } catch (e) {
-      console.error('Failed to save favorites:', e)
-    }
+    storageSet(FAVORITES_KEY, favorites.value.slice(0, MAX_FAVORITES))
   }
 
   /**
@@ -115,10 +102,7 @@ export function useFavorites() {
     if (!result) return null
 
     const { size, solution, sweeps } = result
-    const rowHints = solution.map((row) => getHints(row))
-    const colHints = solution[0].map((_, colIndex) =>
-      getHints(solution.map((row) => row[colIndex])),
-    )
+    const { rowHints, colHints } = getHintsFromSolution(solution)
 
     return {
       size,
@@ -133,16 +117,6 @@ export function useFavorites() {
     }
   }
 
-  function formatSavedTime(isoString) {
-    if (!isoString) return ''
-    const d = new Date(isoString)
-    return (
-      d.toLocaleDateString() +
-      ' ' +
-      d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    )
-  }
-
   return {
     favorites,
     loadFavorites,
@@ -152,6 +126,18 @@ export function useFavorites() {
     deleteFromFavorites,
     markCompleted,
     loadFavoriteData,
-    formatSavedTime,
+    formatSavedTime: formatSavedTimeImpl,
   }
 }
+
+export function formatSavedTime(isoString) {
+  if (!isoString) return ''
+  const d = new Date(isoString)
+  return (
+    d.toLocaleDateString() +
+    ' ' +
+    d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  )
+}
+
+const formatSavedTimeImpl = formatSavedTime

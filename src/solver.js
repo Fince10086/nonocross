@@ -198,11 +198,19 @@ export function randomGrid(size) {
   return grid
 }
 
-// 难度星级阈值映射
-const starThresholds = {
-  5:  [3, 4, 5, 6, 7, 8, 9, 10],
-  10: [7, 9, 11, 13, 15, 17, 20, 24],
-  15: [11, 14, 17, 19, 22, 25, 28, 32]
+import { STAR_THRESHOLDS } from './constants.js'
+
+/**
+ * 从 solution 网格计算 hints
+ * @param {number[][]} solution - 谜题解答
+ * @returns {{rowHints: number[][], colHints: number[][]}} 行和列 hints
+ */
+export function getHintsFromSolution(solution) {
+  const rowHints = solution.map((row) => getHints(row))
+  const colHints = solution[0].map((_, colIndex) =>
+    getHints(solution.map((row) => row[colIndex])),
+  )
+  return { rowHints, colHints }
 }
 
 /**
@@ -212,7 +220,7 @@ const starThresholds = {
  * @returns {number} 星级（1-5，支持半星）
  */
 export function sweepsToStars(sweeps, size) {
-  const t = starThresholds[size]
+  const t = STAR_THRESHOLDS[size]
   if (sweeps <= t[0]) return 1
   if (sweeps <= t[1]) return 1.5
   if (sweeps <= t[2]) return 2
@@ -234,10 +242,7 @@ import { formatStars } from './utils.js'
  */
 export function generatePuzzle(size, maxAttempts = 50) {
   let solution = randomGrid(size)
-  let rowHints = solution.map(row => getHints(row))
-  let colHints = solution[0].map((_, colIndex) =>
-    getHints(solution.map(row => row[colIndex]))
-  )
+  let { rowHints, colHints } = getHintsFromSolution(solution)
 
   let attempts = 0
 
@@ -271,10 +276,7 @@ export function generatePuzzle(size, maxAttempts = 50) {
       solution[r][c] = solution[r][c] === 1 ? 0 : 1
     }
 
-    rowHints = solution.map(row => getHints(row))
-    colHints = solution[0].map((_, colIndex) =>
-      getHints(solution.map(row => row[colIndex]))
-    )
+    ;({ rowHints, colHints } = getHintsFromSolution(solution))
 
     attempts++
   }

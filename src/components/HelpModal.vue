@@ -1,27 +1,21 @@
 <script setup>
 import { t } from '../i18n.js'
 
-const props = defineProps({
+defineProps({
   show: { type: Boolean, default: false },
 })
-
-const emit = defineEmits(['close'])
-
-function handleClose() {
-  emit('close')
-}
 </script>
 
 <template>
   <div
     v-if="show"
     class="modal-overlay"
-    @click.self="handleClose"
+    @click.self="$emit('close')"
   >
-    <div class="modal">
+    <div class="modal help-modal">
       <h3 class="modal-title">{{ t('howToPlay') }}</h3>
 
-      <div class="modal-content">
+      <div class="modal-content thin-scrollbar">
         <p class="intro">
           <a href="https://en.wikipedia.org/wiki/Nonogram" target="_blank">Nonogram</a>
           {{ t('nonogramDesc') }}
@@ -82,44 +76,18 @@ function handleClose() {
       </div>
 
       <div class="modal-actions">
-        <button class="btn" @click="handleClose">{{ t('close') }}</button>
+        <button class="btn" @click="$emit('close')">{{ t('close') }}</button>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.8);
-  z-index: 100;
-  padding: 20px;
-  box-sizing: border-box;
-}
-
-.modal {
-  background: #fff;
-  border: 2px solid #000;
-  border-radius: 4px;
-  padding: 24px;
+.help-modal {
   max-width: 480px;
   width: 100%;
   max-height: 80vh;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
   overflow: hidden;
-}
-
-.modal-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin: 0;
-  flex-shrink: 0;
 }
 
 .modal-content {
@@ -128,23 +96,6 @@ function handleClose() {
   flex: 1;
   font-size: 0.875rem;
   line-height: 1.6;
-}
-
-.modal-content::-webkit-scrollbar {
-  width: 3px;
-}
-
-.modal-content::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.modal-content::-webkit-scrollbar-thumb {
-  background: #000;
-  border-radius: 0;
-}
-
-.modal-content::-webkit-scrollbar-thumb:hover {
-  background: #333;
 }
 
 .intro {
@@ -212,19 +163,8 @@ h5 {
   margin-bottom: 4px;
 }
 
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  flex-shrink: 0;
-}
-
 @media (max-width: 600px) {
-  .modal-overlay {
-    padding: 12px;
-  }
-
-  .modal {
-    padding: 16px;
+  .help-modal {
     max-height: 90vh;
   }
 }

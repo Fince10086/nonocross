@@ -8,10 +8,6 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'toggle'])
 
-function handleClose() {
-  emit('close')
-}
-
 function handleToggle(key) {
   emit('toggle', key, !props.settings[key])
 }
@@ -21,9 +17,9 @@ function handleToggle(key) {
   <div
     v-if="show"
     class="modal-overlay"
-    @click.self="handleClose"
+    @click.self="$emit('close')"
   >
-    <div class="modal">
+    <div class="modal" style="max-width: 480px; width: 100%; gap: 20px;">
       <h3 class="modal-title">{{ t('assistSettings') }}</h3>
 
       <div class="settings-list">
@@ -59,43 +55,13 @@ function handleToggle(key) {
       </div>
 
       <div class="modal-actions">
-        <button class="btn" @click="handleClose">{{ t('close') }}</button>
+        <button class="btn" @click="$emit('close')">{{ t('close') }}</button>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.8);
-  z-index: 100;
-  padding: 20px;
-  box-sizing: border-box;
-}
-
-.modal {
-  background: #fff;
-  border: 2px solid #000;
-  border-radius: 4px;
-  padding: 24px;
-  max-width: 480px;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.modal-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin: 0;
-}
-
 .settings-list {
   display: flex;
   flex-direction: column;
@@ -161,20 +127,5 @@ function handleToggle(key) {
 
 .toggle.active .toggle-knob {
   transform: translateX(20px);
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-@media (max-width: 600px) {
-  .modal-overlay {
-    padding: 12px;
-  }
-
-  .modal {
-    padding: 16px;
-  }
 }
 </style>

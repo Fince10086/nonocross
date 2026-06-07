@@ -27,10 +27,6 @@ function handleImport() {
   emit('import', importCode.value)
 }
 
-function handleClose() {
-  emit('close')
-}
-
 function setError(msg) {
   importError.value = msg
 }
@@ -42,9 +38,9 @@ defineExpose({ setError })
   <div
     v-if="show"
     class="modal-overlay"
-    @click.self="handleClose"
+    @click.self="$emit('close')"
   >
-    <div class="modal">
+    <div class="modal" style="min-width: 320px; gap: 16px;">
       <h3 class="modal-title">{{ t('importPuzzle') }}</h3>
       <p class="modal-desc">{{ t('pasteCode') }}</p>
       <input
@@ -58,40 +54,13 @@ defineExpose({ setError })
       <p v-if="importError" class="modal-error">{{ importError }}</p>
       <div class="modal-actions">
         <button class="btn" @click="handleImport">{{ t('import') }}</button>
-        <button class="btn" @click="handleClose">{{ t('cancel') }}</button>
+        <button class="btn" @click="$emit('close')">{{ t('cancel') }}</button>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.8);
-  z-index: 100;
-}
-
-.modal {
-  background: #fff;
-  border: 2px solid #000;
-  border-radius: 4px;
-  padding: 24px;
-  min-width: 320px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.modal-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin: 0;
-}
-
 .modal-desc {
   font-size: 0.875rem;
   margin: 0;
@@ -112,11 +81,5 @@ defineExpose({ setError })
   font-weight: 600;
   color: #c00;
   margin: 0;
-}
-
-.modal-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
 }
 </style>

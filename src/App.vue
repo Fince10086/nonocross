@@ -5,6 +5,7 @@ import { useFavorites } from "./composables/useFavorites.js";
 import { useGame } from "./composables/useGame.js";
 import { useLevels } from "./composables/useLevels.js";
 import { t, nextLang } from "./i18n.js";
+import { storageGet } from "./storage.js";
 
 import GameBoard from "./components/GameBoard.vue";
 import GameControls from "./components/GameControls.vue";
@@ -42,40 +43,12 @@ watch(() => game.isComplete.value, (complete) => {
     }
 });
 
-function handleTogglePause() {
-    timer.togglePause();
-}
-
-function handleShowImport() {
-    showImportDialog.value = true;
-}
-
-function handleShowHelp() {
-    showHelpDialog.value = true;
-}
-
-function handleCloseHelp() {
-    showHelpDialog.value = false;
-}
-
-function handleShowAssist() {
-    showAssistDialog.value = true;
-}
-
-function handleCloseAssist() {
-    showAssistDialog.value = false;
-}
-
 function handleToggleAssist(key, value) {
     game.toggleAssistSetting(key, value);
 }
 
 function handleSwitchLang() {
     nextLang();
-}
-
-function handleCloseImport() {
-    showImportDialog.value = false;
 }
 
 function handleImportPuzzle(code) {
@@ -127,14 +100,6 @@ function handleLoadFavorite(fav) {
 }
 
 // 关卡模式
-function handleShowLevelSelect() {
-    showLevelSelect.value = true;
-}
-
-function handleCloseLevelSelect() {
-    showLevelSelect.value = false;
-}
-
 async function handleSelectLevel(level) {
     showLevelSelect.value = false;
     await levels.loadLevelData();
@@ -179,17 +144,12 @@ function handleSwitchToLevelMode() {
 function handleSwitchToFreeMode() {
     isLevelMode.value = false;
     currentLevel.value = 0;
-    // 恢复自由模式保存的尺寸
-    try {
-        const savedSize = localStorage.getItem('nonocross-free-size');
-        if (savedSize) {
-            const size = parseInt(savedSize, 10);
-            if ([5, 10, 15].includes(size)) {
-                game.currentSize.value = size;
-            }
+    const savedSize = storageGet('nonocross-free-size');
+    if (savedSize) {
+        const size = parseInt(savedSize, 10);
+        if ([5, 10, 15].includes(size)) {
+            game.currentSize.value = size;
         }
-    } catch (e) {
-        console.error('Failed to restore free mode size:', e);
     }
     game.generateNewPuzzle();
 }
@@ -252,7 +212,7 @@ onUnmounted(() => {
         <div v-if="isLevelMode && currentLevel > 0" class="level-info">
             <div class="level-display">
                 <button class="btn btn-icon" @click="handlePrevLevel" :disabled="currentLevel <= 1">&lt;</button>
-                <span class="level-number" @click="handleShowLevelSelect">{{ t('level') }} {{ currentLevel }}</span>
+                <span class="level-number" @click="showLevelSelect = true">{{ t('level') }} {{ currentLevel }}</span>
                 <button class="btn btn-icon" @click="handleNextLevel" :disabled="currentLevel >= 2700 || currentLevel >= levels.unlockedMax.value">>></button>
             </div>
         </div>
@@ -314,19 +274,19 @@ onUnmounted(() => {
             :puzzles-for-star="game.puzzlesForStar.value"
             :current-puzzle-id="game.currentPuzzleId.value"
             :is-level-mode="isLevelMode"
-            @toggle-pause="handleTogglePause"
+            @toggle-pause="timer.togglePause"
             @undo="game.undo"
             @restart="game.restart"
             @generate-new-puzzle="game.generateNewPuzzle"
             @next-level="handleNextLevel"
-            @show-import="handleShowImport"
+            @show-import="showImportDialog = true"
             @export-puzzle="handleExportPuzzle"
             @save-current-puzzle="handleSaveCurrentPuzzle"
             @delete-from-favorites="handleDeleteFromFavorites"
             @select-star="game.selectStar"
             @select-bank-puzzle="game.selectBankPuzzle"
-            @show-help="handleShowHelp"
-            @show-assist="handleShowAssist"
+            @show-help="showHelpDialog = true"
+            @show-assist="showAssistDialog = true"
             @switch-lang="handleSwitchLang"
         />
 
@@ -341,19 +301,19 @@ onUnmounted(() => {
         <ImportModal
             ref="importModalRef"
             :show="showImportDialog"
-            @close="handleCloseImport"
+            @close="showImportDialog = false"
             @import="handleImportPuzzle"
         />
 
         <HelpModal
             :show="showHelpDialog"
-            @close="handleCloseHelp"
+            @close="showHelpDialog = false"
         />
 
         <AssistModal
             :show="showAssistDialog"
             :settings="game.assistSettings.value"
-            @close="handleCloseAssist"
+            @close="showAssistDialog = false"
             @toggle="handleToggleAssist"
         />
 
@@ -364,7 +324,7 @@ onUnmounted(() => {
             :completed-count="levels.completedCount.value"
             :unlocked-max="levels.unlockedMax.value"
             :records="levels.records.value"
-            @close="handleCloseLevelSelect"
+                @close="showLevelSelect = false"
             @select-level="handleSelectLevel"
         />
     </div>
