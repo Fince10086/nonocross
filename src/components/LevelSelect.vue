@@ -34,7 +34,7 @@ function getLevelInfo(level) {
 }
 
 function isCompleted(level) {
-  return level <= props.completedLevel
+  return props.records.some(r => r.level === level)
 }
 
 function isUnlocked(level) {

@@ -195,7 +195,17 @@ const TRANSLATIONS = {
   },
 }
 
-export const currentLang = ref(localStorage.getItem('nonocross-lang') || 'en')
+function detectBrowserLang() {
+  const saved = localStorage.getItem('nonocross-lang')
+  if (saved) return saved
+  
+  const browserLang = navigator.language || navigator.userLanguage || 'en'
+  if (browserLang.startsWith('zh')) return 'zh'
+  if (browserLang.startsWith('ja')) return 'ja'
+  return 'en'
+}
+
+export const currentLang = ref(detectBrowserLang())
 
 /**
  * 切换语言

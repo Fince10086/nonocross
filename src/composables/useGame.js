@@ -28,8 +28,33 @@ import {
  * @param {ReturnType<typeof import('./useFavorites.js').useFavorites>} favorites - 收藏实例
  * @returns {object} 游戏状态和操作方法
  */
+const FREE_SIZE_KEY = 'nonocross-free-size'
+
+function loadFreeSize() {
+  try {
+    const raw = localStorage.getItem(FREE_SIZE_KEY)
+    if (raw) {
+      const size = parseInt(raw, 10)
+      if ([GRID_SIZE.SMALL, GRID_SIZE.MEDIUM, GRID_SIZE.LARGE].includes(size)) {
+        return size
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load free mode size:', e)
+  }
+  return GRID_SIZE.MEDIUM
+}
+
+function saveFreeSize(size) {
+  try {
+    localStorage.setItem(FREE_SIZE_KEY, String(size))
+  } catch (e) {
+    console.error('Failed to save free mode size:', e)
+  }
+}
+
 export function useGame(timer, favorites) {
-  const currentSize = ref(GRID_SIZE.MEDIUM)
+  const currentSize = ref(loadFreeSize())
   const grid = ref([])
   const mode = ref(MODE.FILL)
   const history = ref([])
@@ -62,7 +87,7 @@ export function useGame(timer, favorites) {
 
   // 辅助功能设置
   const assistSettings = ref({
-    autoMark: false,
+    autoMark: true,
     conflictDetect: false,
     derivableHint: false,
   })
@@ -682,6 +707,7 @@ export function useGame(timer, favorites) {
    */
   function changeSize(size) {
     currentSize.value = size
+    saveFreeSize(size)
     restart()
     const allPuzzles = puzzlesForSize.value
     if (allPuzzles.length > 0) {

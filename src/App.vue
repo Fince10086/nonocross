@@ -179,6 +179,18 @@ function handleSwitchToLevelMode() {
 function handleSwitchToFreeMode() {
     isLevelMode.value = false;
     currentLevel.value = 0;
+    // 恢复自由模式保存的尺寸
+    try {
+        const savedSize = localStorage.getItem('nonocross-free-size');
+        if (savedSize) {
+            const size = parseInt(savedSize, 10);
+            if ([5, 10, 15].includes(size)) {
+                game.currentSize.value = size;
+            }
+        }
+    } catch (e) {
+        console.error('Failed to restore free mode size:', e);
+    }
     game.generateNewPuzzle();
 }
 
@@ -246,16 +258,19 @@ onUnmounted(() => {
             <button class="btn" @click="handleShowLevelSelect">{{ t('selectLevel') }}</button>
         </div>
 
+        <!-- 自由模式：尺寸选择 -->
+        <div v-if="!isLevelMode" class="size-selector-bar">
+            <PuzzleSelector
+                :current-size="game.currentSize.value"
+                @change-size="game.changeSize"
+            />
+        </div>
+
         <div class="top-bar">
             <div class="timer">{{ timer.formattedTime.value }}</div>
             <div v-if="game.currentStars.value" class="difficulty-stars">
                 {{ game.currentStars.value }}
             </div>
-            <PuzzleSelector
-                v-if="!isLevelMode"
-                :current-size="game.currentSize.value"
-                @change-size="game.changeSize"
-            />
         </div>
 
         <GameBoard
@@ -423,6 +438,11 @@ body {
     font-weight: 700;
     min-width: 80px;
     text-align: center;
+}
+
+.size-selector-bar {
+    display: flex;
+    justify-content: center;
 }
 
 .top-bar {
