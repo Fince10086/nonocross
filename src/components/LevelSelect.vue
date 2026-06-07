@@ -90,11 +90,11 @@ const pageButtons = computed(() => {
   const maxButtons = 7
   let start = Math.max(1, currentPage.value - 3)
   let end = Math.min(totalPages.value, start + maxButtons - 1)
-  
+
   if (end - start + 1 < maxButtons) {
     start = Math.max(1, end - maxButtons + 1)
   }
-  
+
   for (let i = start; i <= end; i++) {
     buttons.push(i)
   }
@@ -231,11 +231,29 @@ function formatStars(stars) {
 
 .levels-grid {
   display: grid;
-  grid-template-columns: repeat(10, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
   gap: 6px;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 4px;
   flex: 1;
+}
+
+.levels-grid::-webkit-scrollbar {
+  width: 3px;
+}
+
+.levels-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.levels-grid::-webkit-scrollbar-thumb {
+  background: #000;
+  border-radius: 0;
+}
+
+.levels-grid::-webkit-scrollbar-thumb:hover {
+  background: #333;
 }
 
 .level-cell {
@@ -249,7 +267,7 @@ function formatStars(stars) {
   font-weight: 600;
   transition: all 0.15s;
   padding: 4px;
-  min-height: 60px;
+  aspect-ratio: 1;
   text-align: center;
 }
 
@@ -270,7 +288,8 @@ function formatStars(stars) {
 .level-main {
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  position: relative;
   line-height: 1;
 }
 
@@ -280,11 +299,16 @@ function formatStars(stars) {
 }
 
 .level-check {
+  position: absolute;
+  margin-left: -45px;
   color: #000;
   font-weight: 700;
 }
 
 .level-lock {
+  position: absolute;
+  left: 100%;
+  margin-left: 2px;
   color: #999;
   font-size: 0.625rem;
 }
@@ -324,21 +348,5 @@ function formatStars(stars) {
   display: flex;
   justify-content: center;
   flex-shrink: 0;
-}
-
-@media (max-width: 600px) {
-  .levels-grid {
-    grid-template-columns: repeat(5, 1fr);
-  }
-  
-  .level-cell {
-    min-height: 50px;
-    padding: 2px;
-  }
-  
-  .modal {
-    padding: 16px;
-    max-height: 90vh;
-  }
 }
 </style>

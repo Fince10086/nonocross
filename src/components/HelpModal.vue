@@ -20,15 +20,15 @@ function handleClose() {
   >
     <div class="modal">
       <h3 class="modal-title">{{ t('howToPlay') }}</h3>
-      
+
       <div class="modal-content">
         <p class="intro">
-          <a href="https://en.wikipedia.org/wiki/Nonogram" target="_blank">Nonogram</a> 
+          <a href="https://en.wikipedia.org/wiki/Nonogram" target="_blank">Nonogram</a>
           {{ t('nonogramDesc') }}
         </p>
 
         <h4>{{ t('keyboardShortcuts') }}</h4>
-        
+
         <h5>{{ t('moveAndFill') }}</h5>
         <div class="shortcut-table">
           <div class="shortcut-row">
@@ -123,9 +123,27 @@ function handleClose() {
 
 .modal-content {
   overflow-y: auto;
+  overflow-x: hidden;
   flex: 1;
   font-size: 0.875rem;
   line-height: 1.6;
+}
+
+.modal-content::-webkit-scrollbar {
+  width: 3px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+  background: #000;
+  border-radius: 0;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+  background: #333;
 }
 
 .intro {

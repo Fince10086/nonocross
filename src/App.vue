@@ -140,14 +140,14 @@ async function handleSelectLevel(level) {
     await levels.loadLevelData();
     const levelInfo = levels.getLevelInfo(level);
     if (!levelInfo) return;
-    
+
     const size = levelInfo.size;
     const targetPuzzles = game.puzzleBank.value.filter(p => p.size === size);
     const puzzle = targetPuzzles.find(p => {
         const puzzleId = `${p.size}-${p.id}`;
         return puzzleId === levelInfo.puzzleId;
     });
-    
+
     if (puzzle) {
         isLevelMode.value = true;
         currentLevel.value = level;
@@ -207,7 +207,7 @@ onMounted(() => {
     window.addEventListener("keyup", handleKeyUp);
     favorites.loadFavorites();
     levels.loadProgress();
-    
+
     game.loadPuzzleBank().then(() => {
         levels.loadLevelData().then(() => {
             const startLevel = levels.completedLevel.value + 1;
@@ -232,16 +232,16 @@ onUnmounted(() => {
 
         <!-- 模式切换 -->
         <div class="mode-switch">
-            <button 
-                class="btn" 
-                :class="{ active: isLevelMode }" 
+            <button
+                class="btn"
+                :class="{ active: isLevelMode }"
                 @click="handleSwitchToLevelMode"
             >
                 {{ t('levelMode') }}
             </button>
-            <button 
-                class="btn" 
-                :class="{ active: !isLevelMode }" 
+            <button
+                class="btn"
+                :class="{ active: !isLevelMode }"
                 @click="handleSwitchToFreeMode"
             >
                 {{ t('freeMode') }}
@@ -252,10 +252,9 @@ onUnmounted(() => {
         <div v-if="isLevelMode && currentLevel > 0" class="level-info">
             <div class="level-display">
                 <button class="btn btn-icon" @click="handlePrevLevel" :disabled="currentLevel <= 1">&lt;</button>
-                <span class="level-number">{{ t('level') }} {{ currentLevel }}</span>
+                <span class="level-number" @click="handleShowLevelSelect">{{ t('level') }} {{ currentLevel }}</span>
                 <button class="btn btn-icon" @click="handleNextLevel" :disabled="currentLevel >= 2700 || currentLevel >= levels.unlockedMax.value">>></button>
             </div>
-            <button class="btn" @click="handleShowLevelSelect">{{ t('selectLevel') }}</button>
         </div>
 
         <!-- 自由模式：尺寸选择 -->
@@ -438,6 +437,12 @@ body {
     font-weight: 700;
     min-width: 80px;
     text-align: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.level-number:hover {
+    opacity: 0.7;
 }
 
 .size-selector-bar {
@@ -489,25 +494,6 @@ body {
     to {
         opacity: 1;
         transform: translateY(0);
-    }
-}
-
-@media (max-width: 600px) {
-    .top-bar {
-        gap: 12px;
-    }
-
-    .timer {
-        font-size: 1.1rem;
-        min-width: 50px;
-    }
-
-    .difficulty-stars {
-        font-size: 0.875rem;
-    }
-
-    .pause-text {
-        font-size: 1.5rem;
     }
 }
 </style>

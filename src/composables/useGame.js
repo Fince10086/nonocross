@@ -85,6 +85,9 @@ export function useGame(timer, favorites) {
   // 键盘选中格子
   const selectedCell = ref(null)
 
+  // 最后鼠标/触摸交互的格子（键盘重新激活时的起始位置）
+  const lastInteractedCell = ref(null)
+
   // 辅助功能设置
   const assistSettings = ref({
     autoMark: true,
@@ -517,6 +520,8 @@ export function useGame(timer, favorites) {
     dragValue.value = currentVal === targetVal ? CELL_STATE.EMPTY : targetVal
     grid.value[r][c] = dragValue.value
     isDragging.value = true
+    selectedCell.value = null
+    lastInteractedCell.value = { r, c }
     updateHintDetermined(r, c)
     checkComplete()
   }
@@ -572,6 +577,8 @@ export function useGame(timer, favorites) {
     grid.value[r][c] = dragValue.value
     isDragging.value = true
     touchActiveCell.value = { r, c }
+    selectedCell.value = null
+    lastInteractedCell.value = { r, c }
     updateHintDetermined(r, c)
     checkComplete()
   }
@@ -793,7 +800,8 @@ export function useGame(timer, favorites) {
   function moveSelectedCell(direction) {
     if (isComplete.value) return
     if (!selectedCell.value) {
-      selectedCell.value = { r: 0, c: 0 }
+      const start = lastInteractedCell.value || { r: 0, c: 0 }
+      selectedCell.value = { r: start.r, c: start.c }
       return
     }
     const size = currentSize.value
@@ -918,8 +926,8 @@ export function useGame(timer, favorites) {
         e.preventDefault()
         if (timer.isPaused.value) {
           timer.resume()
-        } else if (!isComplete.value) {
-          actOnSelectedCell(mode.value === MODE.FILL ? CELL_STATE.FILLED : CELL_STATE.MARKED)
+        } else if (!isComplete.value && !e.repeat) {
+          startKeyDrag(mode.value === MODE.FILL ? CELL_STATE.FILLED : CELL_STATE.MARKED)
         }
         break
 
@@ -972,7 +980,7 @@ export function useGame(timer, favorites) {
         mode.value = mode.value === MODE.FILL ? MODE.X : MODE.FILL
       }
     }
-    if (e.key === 'f' || e.key === 'F' || e.key === 'x' || e.key === 'X') {
+    if (e.key === 'f' || e.key === 'F' || e.key === 'x' || e.key === 'X' || e.key === ' ') {
       keyDragValue.value = null
     }
   }

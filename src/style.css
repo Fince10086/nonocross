@@ -70,15 +70,3 @@ body {
 .btn-group .puzzle-select:last-child {
   border-right: none;
 }
-
-@media (max-width: 600px) {
-  #app {
-    padding: 12px;
-  }
-
-  .btn-icon {
-    width: 32px;
-    height: 32px;
-    font-size: 0.875rem;
-  }
-}
