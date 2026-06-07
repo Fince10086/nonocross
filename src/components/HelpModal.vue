@@ -73,6 +73,30 @@ defineProps({
           <li>{{ t('dragFillMultiple') }}</li>
           <li>{{ t('longPressToggle') }}</li>
         </ul>
+
+        <h4>{{ t('assistHints') }}</h4>
+        <ul class="tips">
+          <li>{{ t('assistInSettings') }}</li>
+          <li>{{ t('assistPenalty') }}</li>
+        </ul>
+
+        <h4>{{ t('levelMode') }}</h4>
+        <ul class="tips">
+          <li>{{ t('levelModeDesc') }}</li>
+          <li>{{ t('levelStarsDesc') }}</li>
+        </ul>
+
+        <h4>{{ t('freeMode') }}</h4>
+        <ul class="tips">
+          <li>{{ t('freeModeDesc') }}</li>
+          <li>{{ t('freeModeFeatures') }}</li>
+        </ul>
+
+        <h4>{{ t('gameControls') }}</h4>
+        <ul class="tips">
+          <li>{{ t('dragDesc') }}</li>
+          <li>{{ t('modeToggleDesc') }}</li>
+        </ul>
       </div>
 
       <div class="modal-actions">
