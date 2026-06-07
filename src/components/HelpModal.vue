@@ -104,6 +104,7 @@ function handleClose() {
 .modal {
   background: #fff;
   border: 2px solid #000;
+  border-radius: 4px;
   padding: 24px;
   max-width: 480px;
   width: 100%;

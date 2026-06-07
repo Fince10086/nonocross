@@ -23,6 +23,7 @@ body {
   font-size: 0.875rem;
   font-weight: 600;
   border: 2px solid #000;
+  border-radius: 4px;
   background: #fff;
   color: #000;
   cursor: pointer;
@@ -57,16 +58,29 @@ body {
 .btn-group {
   display: flex;
   gap: 0;
-  border: 2px solid #000;
 }
 
 .btn-group .btn,
 .btn-group .puzzle-select {
-  border: none;
-  border-right: 2px solid #000;
+  border-radius: 0;
+  margin-left: -2px;
+}
+
+.btn-group .btn:first-child,
+.btn-group .puzzle-select:first-child {
+  margin-left: 0;
+  border-radius: 4px 0 0 4px;
 }
 
 .btn-group .btn:last-child,
 .btn-group .puzzle-select:last-child {
-  border-right: none;
+  border-radius: 0 4px 4px 0;
+}
+
+.btn-group .btn:hover,
+.btn-group .btn:focus,
+.btn-group .puzzle-select:hover,
+.btn-group .puzzle-select:focus {
+  position: relative;
+  z-index: 1;
 }

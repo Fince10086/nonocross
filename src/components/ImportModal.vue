@@ -78,6 +78,7 @@ defineExpose({ setError })
 .modal {
   background: #fff;
   border: 2px solid #000;
+  border-radius: 4px;
   padding: 24px;
   min-width: 320px;
   display: flex;
@@ -101,6 +102,7 @@ defineExpose({ setError })
   font-size: 0.875rem;
   font-weight: 600;
   border: 2px solid #000;
+  border-radius: 4px;
   width: 100%;
   box-sizing: border-box;
 }

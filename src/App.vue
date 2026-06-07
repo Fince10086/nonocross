@@ -231,7 +231,7 @@ onUnmounted(() => {
         <h1 class="title">NONOCROSS</h1>
 
         <!-- 模式切换 -->
-        <div class="mode-switch">
+        <div class="btn-group">
             <button
                 class="btn"
                 :class="{ active: isLevelMode }"
@@ -396,28 +396,6 @@ body {
     font-size: 2rem;
     font-weight: 700;
     letter-spacing: 0.15em;
-}
-
-.mode-switch {
-    display: flex;
-    gap: 0;
-}
-
-.mode-switch .btn {
-    border-radius: 0;
-}
-
-.mode-switch .btn:first-child {
-    border-radius: 4px 0 0 4px;
-}
-
-.mode-switch .btn:last-child {
-    border-radius: 0 4px 4px 0;
-}
-
-.mode-switch .btn.active {
-    background: #000;
-    color: #fff;
 }
 
 .level-info {

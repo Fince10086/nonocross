@@ -55,6 +55,7 @@ const emit = defineEmits(['changeSize', 'selectStar', 'selectBankPuzzle'])
   font-size: 0.875rem;
   font-weight: 600;
   border: 2px solid #000;
+  border-radius: 4px;
   background: #fff;
   cursor: pointer;
 }

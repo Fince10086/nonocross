@@ -188,6 +188,7 @@ function formatStars(stars) {
 .modal {
   background: #fff;
   border: 2px solid #000;
+  border-radius: 4px;
   padding: 24px;
   max-width: 720px;
   width: 100%;
@@ -258,6 +259,7 @@ function formatStars(stars) {
 
 .level-cell {
   border: 2px solid #000;
+  border-radius: 4px;
   display: flex;
   flex-direction: column;
   justify-content: center;

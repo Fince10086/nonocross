@@ -421,6 +421,8 @@ const boardVars = computed(() => {
   grid-template-columns: auto 1fr;
   grid-template-rows: auto 1fr;
   border: 2px solid #000;
+  border-radius: 4px;
+  overflow: hidden;
   user-select: none;
   touch-action: none; /* 防止触摸时页面滚动 */
 }

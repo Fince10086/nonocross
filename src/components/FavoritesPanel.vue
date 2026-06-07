@@ -78,6 +78,7 @@ function formatSavedTime(isoString) {
 
 .favorite-item {
   border: 2px solid #000;
+  border-radius: 4px;
   padding: 8px 12px;
   cursor: pointer;
   transition: background-color 0.15s;
