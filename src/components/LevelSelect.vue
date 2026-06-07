@@ -13,7 +13,7 @@ const props = defineProps({
 
 const emit = defineEmits(['selectLevel', 'close'])
 
-const LEVELS_PER_PAGE = 100
+const LEVELS_PER_PAGE = 200
 const currentPage = ref(1)
 
 const totalPages = computed(() => Math.ceil(2700 / LEVELS_PER_PAGE))
@@ -79,8 +79,8 @@ watch(() => props.show, (show) => {
 
 const pageButtons = computed(() => {
   const buttons = []
-  const maxButtons = 7
-  let start = Math.max(1, currentPage.value - 3)
+  const maxButtons = 4
+  let start = Math.max(1, currentPage.value - Math.floor(maxButtons / 2))
   let end = Math.min(totalPages.value, start + maxButtons - 1)
 
   if (end - start + 1 < maxButtons) {
@@ -106,23 +106,6 @@ function formatLevelStars(stars) {
         <div class="progress-info">
           <span>{{ t('completedLabel') }}: {{ completedCount }}/2700</span>
         </div>
-      </div>
-
-      <!-- 页码导航 -->
-      <div class="pagination">
-        <button class="btn btn-icon" @click="prevPage" :disabled="currentPage === 1">&lt;</button>
-        <div class="page-numbers">
-          <button
-            v-for="page in pageButtons"
-            :key="page"
-            class="btn btn-icon"
-            :class="{ active: page === currentPage }"
-            @click="goToPage(page)"
-          >
-            {{ page }}
-          </button>
-        </div>
-        <button class="btn btn-icon" @click="nextPage" :disabled="currentPage === totalPages">>></button>
       </div>
 
       <!-- 关卡网格 -->
@@ -153,7 +136,20 @@ function formatLevelStars(stars) {
         </div>
       </div>
 
-      <div class="modal-actions">
+      <div class="modal-footer">
+        <div class="btn-group">
+          <button class="btn btn-icon" @click="prevPage" :disabled="currentPage === 1">&lt;</button>
+          <button
+            v-for="page in pageButtons"
+            :key="page"
+            class="btn btn-icon"
+            :class="{ active: page === currentPage }"
+            @click="goToPage(page)"
+          >
+            {{ page }}
+          </button>
+          <button class="btn btn-icon" @click="nextPage" :disabled="currentPage === totalPages">&gt;</button>
+        </div>
         <button class="btn" @click="$emit('close')">{{ t('close') }}</button>
       </div>
     </div>
@@ -179,19 +175,6 @@ function formatLevelStars(stars) {
 .progress-info {
   font-size: 0.875rem;
   font-weight: 600;
-}
-
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.page-numbers {
-  display: flex;
-  gap: 4px;
 }
 
 .levels-grid {
@@ -288,7 +271,11 @@ function formatLevelStars(stars) {
   font-weight: 700;
 }
 
-.modal-actions {
-  justify-content: center;
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  gap: 12px;
 }
 </style>

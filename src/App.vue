@@ -213,7 +213,7 @@ onUnmounted(() => {
             <div class="level-display">
                 <button class="btn btn-icon" @click="handlePrevLevel" :disabled="currentLevel <= 1">&lt;</button>
                 <span class="level-number" @click="showLevelSelect = true">{{ t('level') }} {{ currentLevel }}</span>
-                <button class="btn btn-icon" @click="handleNextLevel" :disabled="currentLevel >= 2700 || currentLevel >= levels.unlockedMax.value">>></button>
+                <button class="btn btn-icon" @click="handleNextLevel" :disabled="currentLevel >= 2700 || currentLevel >= levels.unlockedMax.value">&gt;</button>
             </div>
         </div>
 
@@ -291,6 +291,7 @@ onUnmounted(() => {
         />
 
         <FavoritesPanel
+            v-if="!isLevelMode"
             :favorites="favorites.favorites.value"
             @load-favorite="handleLoadFavorite"
         />

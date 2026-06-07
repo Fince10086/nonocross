@@ -70,8 +70,8 @@ const emit = defineEmits([
       </div>
     </div>
 
-    <!-- Row 3: Import / Export / Save / Delete -->
-    <div class="controls-row">
+    <!-- Row 3: Import / Export / Save / Delete (自由模式) -->
+    <div v-if="!isLevelMode" class="controls-row">
       <div class="btn-group">
         <button class="btn" @click="$emit('showImport')">{{ t('import') }}</button>
         <button class="btn" @click="$emit('exportPuzzle')">{{ t('export') }}</button>
