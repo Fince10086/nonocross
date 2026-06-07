@@ -151,15 +151,14 @@ function formatStars(stars) {
         >
           <div class="level-main">
             <span class="level-number">{{ level }}</span>
-            <span v-if="isCompleted(level)" class="level-check">✓</span>
-            <span v-else-if="isLocked(level)" class="level-lock">●</span>
+            <span v-if="isLocked(level)" class="level-lock">●</span>
           </div>
           <div v-if="getLevelInfo(level)" class="level-meta">
             <span class="level-size">{{ getLevelInfo(level).size }}×{{ getLevelInfo(level).size }}</span>
             <span class="level-stars">{{ getLevelInfo(level).stars }}★</span>
           </div>
-          <div v-if="getRecord(level)" class="level-time">
-            {{ formatTime(getRecord(level).time) }}
+          <div v-if="isCompleted(level)" class="level-record">
+            ✓ {{ formatTime(getRecord(level).time) }}
             <span v-if="getRecord(level).assisted" class="assist-mark">*</span>
           </div>
         </div>
@@ -278,7 +277,8 @@ function formatStars(stars) {
 }
 
 .level-cell.completed {
-  background: #e8e8e8;
+  border-color: #888;
+  opacity: 0.8;
 }
 
 .level-cell.locked {
@@ -297,13 +297,6 @@ function formatStars(stars) {
 
 .level-number {
   font-size: 0.875rem;
-  font-weight: 700;
-}
-
-.level-check {
-  position: absolute;
-  margin-left: -45px;
-  color: #000;
   font-weight: 700;
 }
 
@@ -334,9 +327,10 @@ function formatStars(stars) {
   font-weight: 700;
 }
 
-.level-time {
+.level-record {
   font-size: 0.625rem;
-  color: #666;
+  color: #388e3c;
+  font-weight: 600;
   margin-top: 2px;
   line-height: 1;
 }

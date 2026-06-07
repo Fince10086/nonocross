@@ -22,6 +22,7 @@ const emit = defineEmits([
   'undo',
   'restart',
   'generateNewPuzzle',
+  'nextLevel',
   'showImport',
   'exportPuzzle',
   'saveCurrentPuzzle',
@@ -39,7 +40,14 @@ const emit = defineEmits([
     <!-- Row 1: Game actions -->
     <div class="controls-row">
       <div class="btn-group">
-        <button class="btn" @click="$emit('togglePause')">
+        <button
+          v-if="isComplete"
+          class="btn"
+          @click="$emit(isLevelMode ? 'nextLevel' : 'generateNewPuzzle')"
+        >
+          {{ isLevelMode ? t('nextLevel') : t('newPuzzle') }}
+        </button>
+        <button v-else class="btn" @click="$emit('togglePause')">
           {{ isPaused ? t('resume') : t('pause') }}
         </button>
         <button
@@ -50,14 +58,6 @@ const emit = defineEmits([
           {{ t('undo') }}
         </button>
         <button class="btn" @click="$emit('restart')">{{ t('restart') }}</button>
-        <button
-          v-if="!isLevelMode"
-          class="btn"
-          @click="$emit('generateNewPuzzle')"
-          :disabled="isGenerating"
-        >
-          {{ isGenerating ? t('generating') : t('newRandom') }}
-        </button>
       </div>
     </div>
 

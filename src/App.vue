@@ -318,6 +318,7 @@ onUnmounted(() => {
             @undo="game.undo"
             @restart="game.restart"
             @generate-new-puzzle="game.generateNewPuzzle"
+            @next-level="handleNextLevel"
             @show-import="handleShowImport"
             @export-puzzle="handleExportPuzzle"
             @save-current-puzzle="handleSaveCurrentPuzzle"

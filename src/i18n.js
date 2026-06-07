@@ -72,12 +72,14 @@ const TRANSLATIONS = {
     levels: 'Level Select',
     selectLevel: 'Select Level',
     completed: 'Completed',
+    nextLevel: 'Next Level',
+    newPuzzle: 'New Puzzle',
   },
   zh: {
     pause: '\u6682\u505c',
     resume: '\u7ee7\u7eed',
     undo: '\u64a4\u9500',
-    restart: '\u91cd\u6765',
+    restart: '\u91cd\u7f6e',
     newRandom: '\u65b0\u968f\u673a',
     generating: '\u751f\u6210\u4e2d...',
     import: '\u5bfc\u5165',
@@ -132,6 +134,8 @@ const TRANSLATIONS = {
     levels: '\u5173\u5361\u9009\u62e9',
     selectLevel: '\u9009\u62e9\u5173\u5361',
     completed: '\u5df2\u5b8c\u6210',
+    nextLevel: '\u4e0b\u4e00\u5173',
+    newPuzzle: '\u65b0\u8c1c\u9898',
   },
   ja: {
     pause: '\u4e00\u6642\u505c\u6b62',
@@ -192,6 +196,8 @@ const TRANSLATIONS = {
     levels: '\u30b9\u30c6\u30fc\u30b8\u9078\u629e',
     selectLevel: '\u30b9\u30c6\u30fc\u30b8\u3092\u9078\u629e',
     completed: '\u5b8c\u4e86',
+    nextLevel: '\u6b21\u306e\u30b9\u30c6\u30fc\u30b8',
+    newPuzzle: '\u65b0\u3057\u3044\u30d1\u30ba\u30eb',
   },
 }
 
