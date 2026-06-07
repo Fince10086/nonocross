@@ -66,6 +66,12 @@ const TRANSLATIONS = {
     nonogramDesc: 'is a logic puzzle where you fill grid cells according to the numbers on the sides. Each number indicates how many consecutive filled cells are in that row/column.',
     exportSuccess: 'Code copied to clipboard',
     copyFailed: 'Copy failed, please manually copy the code below:',
+    levelMode: 'Levels',
+    freeMode: 'Free',
+    level: 'Level',
+    levels: 'Level Select',
+    selectLevel: 'Select Level',
+    completed: 'Completed',
   },
   zh: {
     pause: '\u6682\u505c',
@@ -120,6 +126,12 @@ const TRANSLATIONS = {
     nonogramDesc: '\u662f\u4e00\u79cd\u903b\u8f91\u8c1c\u9898\uff0c\u4f60\u9700\u8981\u6839\u636e\u8fb9\u4e0a\u7684\u6570\u5b57\u586b\u5145\u7f51\u683c\u3002\u6bcf\u4e2a\u6570\u5b57\u8868\u793a\u8be5\u884c/\u5217\u4e2d\u6709\u591a\u5c11\u4e2a\u8fde\u7eed\u7684\u586b\u5145\u683c\u5b50\u3002',
     exportSuccess: '\u7f16\u7801\u5df2\u590d\u5236\u5230\u526a\u8d34\u677f',
     copyFailed: '\u590d\u5236\u5931\u8d25\uff0c\u8bf7\u624b\u52a8\u590d\u5236\u4ee5\u4e0b\u7f16\u7801\uff1a',
+    levelMode: '\u5173\u5361',
+    freeMode: '\u81ea\u7531',
+    level: '\u5173\u5361',
+    levels: '\u5173\u5361\u9009\u62e9',
+    selectLevel: '\u9009\u62e9\u5173\u5361',
+    completed: '\u5df2\u5b8c\u6210',
   },
   ja: {
     pause: '\u4e00\u6642\u505c\u6b62',
@@ -174,6 +186,12 @@ const TRANSLATIONS = {
     nonogramDesc: '\u306f\u3001\u5074\u9762\u306e\u6570\u5b57\u306b\u5f93\u3063\u3066\u30de\u30b9\u3092\u5857\u308a\u3064\u3076\u3059\u8ad6\u7406\u30d1\u30ba\u30eb\u3067\u3059\u3002\u5404\u6570\u5b57\u306f\u3001\u305d\u306e\u884c/\u5217\u306b\u3042\u308b\u9023\u7d9a\u3057\u305f\u5857\u308a\u3064\u3076\u3057\u30de\u30b9\u306e\u6570\u3092\u793a\u3057\u307e\u3059\u3002',
     exportSuccess: '\u30b3\u30fc\u30c9\u3092\u30af\u30ea\u30c3\u30d7\u30dc\u30fc\u30c9\u306b\u30b3\u30d4\u30fc\u3057\u307e\u3057\u305f',
     copyFailed: '\u30b3\u30d4\u30fc\u306b\u5931\u6557\u3057\u307e\u3057\u305f\u3002\u4ee5\u4e0b\u306e\u30b3\u30fc\u30c9\u3092\u624b\u52d5\u3067\u30b3\u30d4\u30fc\u3057\u3066\u304f\u3060\u3055\u3044\uff1a',
+    levelMode: '\u30b9\u30c6\u30fc\u30b8',
+    freeMode: '\u30d5\u30ea\u30fc',
+    level: '\u30b9\u30c6\u30fc\u30b8',
+    levels: '\u30b9\u30c6\u30fc\u30b8\u9078\u629e',
+    selectLevel: '\u30b9\u30c6\u30fc\u30b8\u3092\u9078\u629e',
+    completed: '\u5b8c\u4e86',
   },
 }
 

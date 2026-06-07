@@ -76,3 +76,10 @@ export const MOUSE_BUTTON = {
   LEFT: 0,
   RIGHT: 2,
 }
+
+// 关卡系统
+export const LEVEL_PHASES = {
+  EARLY: { start: 1, end: 167, sizeWeights: { 5: 0.85, 10: 0.15, 15: 0 } },
+  MID: { start: 168, end: 334, sizeWeights: { 5: 0.50, 10: 0.40, 15: 0.10 } },
+  LATE: { start: 335, end: 500, sizeWeights: { 5: 0.15, 10: 0.45, 15: 0.40 } },
+}

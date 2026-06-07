@@ -11,6 +11,7 @@ const props = defineProps({
   availableStars: { type: Array, default: () => [] },
   puzzlesForStar: { type: Array, default: () => [] },
   currentPuzzleId: { type: String, default: null },
+  isLevelMode: { type: Boolean, default: false },
 })
 
 import { formatStars } from '../utils.js'
@@ -50,6 +51,7 @@ const emit = defineEmits([
         </button>
         <button class="btn" @click="$emit('restart')">{{ t('restart') }}</button>
         <button
+          v-if="!isLevelMode"
           class="btn"
           @click="$emit('generateNewPuzzle')"
           :disabled="isGenerating"
@@ -59,28 +61,8 @@ const emit = defineEmits([
       </div>
     </div>
 
-    <!-- Row 2: Puzzle Picker -->
-    <div v-if="puzzleBankLoaded" class="controls-row">
-      <div class="btn-group">
-        <select
-          class="puzzle-select"
-          :value="selectedStar"
-          @change="$emit('selectStar', parseFloat($event.target.value))"
-        >
-          <option v-for="star in availableStars" :key="star" :value="star">
-            {{ formatStars(star) }}
-          </option>
-        </select>
-        <select
-          class="puzzle-select"
-          :value="currentPuzzleId || ''"
-          @change="$emit('selectBankPuzzle', puzzlesForStar.find((p) => p.id === $event.target.value))"
-        >
-          <option v-for="p in puzzlesForStar" :key="p.id" :value="p.id">
-            {{ p.id }}
-          </option>
-        </select>
-      </div>
+    <!-- Row 2: Settings buttons -->
+    <div class="controls-row">
       <div class="btn-group">
         <button class="btn btn-icon" @click="$emit('showHelp')" :title="t('help')">?</button>
         <button class="btn btn-icon" @click="$emit('showAssist')" :title="t('assistSettings')">&#9881;</button>

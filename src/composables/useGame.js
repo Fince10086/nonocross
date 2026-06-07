@@ -72,6 +72,12 @@ export function useGame(timer, favorites) {
   const colHintConflict = ref([])
   const rowHintDerivable = ref([])
   const colHintDerivable = ref([])
+  
+  // 辅助功能使用记录（用于关卡系统）
+  const assistUsed = ref({
+    conflictDetect: false,
+    derivableHint: false,
+  })
 
   // 加载本地存储的辅助设置
   function loadAssistSettings() {
@@ -141,6 +147,7 @@ export function useGame(timer, favorites) {
       grid.value = newGrid
       // 更新所有受影响的行列的 determined 状态
       initHintDetermined()
+      checkComplete()
     }
   }
 
@@ -337,7 +344,13 @@ export function useGame(timer, favorites) {
     dragValue.value = null
     touchActiveCell.value = null
     selectedCell.value = null
-
+    
+    // 初始化辅助使用记录（如果设置已开启则标记为已使用）
+    assistUsed.value = {
+      conflictDetect: assistSettings.value.conflictDetect,
+      derivableHint: assistSettings.value.derivableHint,
+    }
+    
     // 自动填充极端行/列：全空([0])或全满([size])
     const size = currentSize.value
     if (currentRowHints.value && currentColHints.value) {
@@ -388,6 +401,13 @@ export function useGame(timer, favorites) {
       if (value) {
         // 开启时立即更新
         updateAssistState()
+        // 记录辅助使用
+        if (key === 'conflictDetect') {
+          assistUsed.value.conflictDetect = true
+        }
+        if (key === 'derivableHint') {
+          assistUsed.value.derivableHint = true
+        }
         if (key === 'autoMark') {
           pushHistory()
           runAutoMark()
@@ -422,6 +442,7 @@ export function useGame(timer, favorites) {
   function undo() {
     if (history.value.length === 0) return
     grid.value = history.value.pop()
+    isComplete.value = false
     initHintDetermined()
   }
 
@@ -492,7 +513,10 @@ export function useGame(timer, favorites) {
       grid.value[r][c] = dragValue.value
       changed = true
     }
-    if (changed) updateHintDetermined(r, c)
+    if (changed) {
+      updateHintDetermined(r, c)
+      checkComplete()
+    }
   }
 
   /**
@@ -562,7 +586,10 @@ export function useGame(timer, favorites) {
       grid.value[r][c] = dragValue.value
       changed = true
     }
-    if (changed) updateHintDetermined(r, c)
+    if (changed) {
+      updateHintDetermined(r, c)
+      checkComplete()
+    }
   }
 
   /**
@@ -951,6 +978,7 @@ export function useGame(timer, favorites) {
 
     // 辅助功能
     assistSettings,
+    assistUsed,
     rowHintConflict,
     colHintConflict,
     rowHintDerivable,

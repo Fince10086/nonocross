@@ -1,8 +1,9 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useTimer } from "./composables/useTimer.js";
 import { useFavorites } from "./composables/useFavorites.js";
 import { useGame } from "./composables/useGame.js";
+import { useLevels } from "./composables/useLevels.js";
 import { t, nextLang } from "./i18n.js";
 
 import GameBoard from "./components/GameBoard.vue";
@@ -12,10 +13,16 @@ import FavoritesPanel from "./components/FavoritesPanel.vue";
 import ImportModal from "./components/ImportModal.vue";
 import HelpModal from "./components/HelpModal.vue";
 import AssistModal from "./components/AssistModal.vue";
+import LevelSelect from "./components/LevelSelect.vue";
 
 const timer = useTimer();
 const favorites = useFavorites();
 const game = useGame(timer, favorites);
+const levels = useLevels();
+
+const isLevelMode = ref(false);
+const currentLevel = ref(0);
+const showLevelSelect = ref(false);
 
 const showImportDialog = ref(false);
 const showHelpDialog = ref(false);
@@ -25,6 +32,14 @@ const importModalRef = ref(null);
 
 const isInFavoritesComputed = computed(() => {
     return favorites.isInFavorites(game.currentSolution.value);
+});
+
+// 监听关卡完成
+watch(() => game.isComplete.value, (complete) => {
+    if (complete && isLevelMode.value && currentLevel.value > 0) {
+        const hasAssist = game.assistUsed.value?.conflictDetect || game.assistUsed.value?.derivableHint;
+        levels.recordCompletion(currentLevel.value, timer.seconds.value, hasAssist);
+    }
 });
 
 function handleTogglePause() {
@@ -72,9 +87,6 @@ function handleImportPuzzle(code) {
     }
 }
 
-/**
- * 导出当前谜题到剪贴板
- */
 async function handleExportPuzzle() {
     const code = game.exportPuzzle();
     if (!code) return;
@@ -85,7 +97,7 @@ async function handleExportPuzzle() {
             showExportToast.value = false;
         }, 2000);
     } catch (e) {
-        console.error("复制到剪贴板失败:", e);
+        console.error("Export failed:", e);
         alert(t('copyFailed') + "\n" + code);
     }
 }
@@ -110,6 +122,64 @@ function handleLoadFavorite(fav) {
     const data = favorites.loadFavoriteData(fav);
     if (!data) return;
     game.restoreFromData(data);
+    isLevelMode.value = false;
+    currentLevel.value = 0;
+}
+
+// 关卡模式
+function handleShowLevelSelect() {
+    showLevelSelect.value = true;
+}
+
+function handleCloseLevelSelect() {
+    showLevelSelect.value = false;
+}
+
+async function handleSelectLevel(level) {
+    showLevelSelect.value = false;
+    await levels.loadLevelData();
+    const levelInfo = levels.getLevelInfo(level);
+    if (!levelInfo) return;
+    
+    const size = levelInfo.size;
+    const targetPuzzles = game.puzzleBank.value.filter(p => p.size === size);
+    const puzzle = targetPuzzles.find(p => {
+        const puzzleId = `${p.size}-${p.id}`;
+        return puzzleId === levelInfo.puzzleId;
+    });
+    
+    if (puzzle) {
+        isLevelMode.value = true;
+        currentLevel.value = level;
+        game.currentSize.value = size;
+        game.loadPuzzle(puzzle);
+    } else {
+        game.generateNewPuzzle();
+    }
+}
+
+function handleNextLevel() {
+    if (currentLevel.value >= 2700) return;
+    handleSelectLevel(currentLevel.value + 1);
+}
+
+function handlePrevLevel() {
+    if (currentLevel.value <= 1) return;
+    handleSelectLevel(currentLevel.value - 1);
+}
+
+function handleSwitchToLevelMode() {
+    isLevelMode.value = true;
+    const startLevel = levels.completedLevel.value + 1;
+    if (startLevel <= 2700) {
+        handleSelectLevel(startLevel);
+    }
+}
+
+function handleSwitchToFreeMode() {
+    isLevelMode.value = false;
+    currentLevel.value = 0;
+    game.generateNewPuzzle();
 }
 
 function handleKeyDown(e) {
@@ -124,15 +194,17 @@ onMounted(() => {
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     favorites.loadFavorites();
+    levels.loadProgress();
+    
     game.loadPuzzleBank().then(() => {
-        const allPuzzles = game.puzzlesForSize.value;
-        if (allPuzzles.length > 0) {
-            const randomPuzzle = allPuzzles[Math.floor(Math.random() * allPuzzles.length)];
-            game.selectedStar.value = randomPuzzle.stars;
-            game.selectBankPuzzle(randomPuzzle);
-        } else {
-            game.generateNewPuzzle();
-        }
+        levels.loadLevelData().then(() => {
+            const startLevel = levels.completedLevel.value + 1;
+            if (startLevel <= 2700 && levels.levelsData.value) {
+                handleSelectLevel(startLevel);
+            } else {
+                game.generateNewPuzzle();
+            }
+        });
     });
 });
 
@@ -146,12 +218,41 @@ onUnmounted(() => {
     <div class="app">
         <h1 class="title">NONOCROSS</h1>
 
+        <!-- 模式切换 -->
+        <div class="mode-switch">
+            <button 
+                class="btn" 
+                :class="{ active: isLevelMode }" 
+                @click="handleSwitchToLevelMode"
+            >
+                {{ t('levelMode') }}
+            </button>
+            <button 
+                class="btn" 
+                :class="{ active: !isLevelMode }" 
+                @click="handleSwitchToFreeMode"
+            >
+                {{ t('freeMode') }}
+            </button>
+        </div>
+
+        <!-- 关卡信息 -->
+        <div v-if="isLevelMode && currentLevel > 0" class="level-info">
+            <div class="level-display">
+                <button class="btn btn-icon" @click="handlePrevLevel" :disabled="currentLevel <= 1">&lt;</button>
+                <span class="level-number">{{ t('level') }} {{ currentLevel }}</span>
+                <button class="btn btn-icon" @click="handleNextLevel" :disabled="currentLevel >= 2700 || currentLevel >= levels.unlockedMax.value">>></button>
+            </div>
+            <button class="btn" @click="handleShowLevelSelect">{{ t('selectLevel') }}</button>
+        </div>
+
         <div class="top-bar">
-            <div class="timer">{{ timer.formattedTime }}</div>
-            <div v-if="game.currentStars" class="difficulty-stars">
-                {{ game.currentStars }}
+            <div class="timer">{{ timer.formattedTime.value }}</div>
+            <div v-if="game.currentStars.value" class="difficulty-stars">
+                {{ game.currentStars.value }}
             </div>
             <PuzzleSelector
+                v-if="!isLevelMode"
                 :current-size="game.currentSize.value"
                 @change-size="game.changeSize"
             />
@@ -198,6 +299,7 @@ onUnmounted(() => {
             :available-stars="game.availableStars.value"
             :puzzles-for-star="game.puzzlesForStar.value"
             :current-puzzle-id="game.currentPuzzleId.value"
+            :is-level-mode="isLevelMode"
             @toggle-pause="handleTogglePause"
             @undo="game.undo"
             @restart="game.restart"
@@ -239,6 +341,17 @@ onUnmounted(() => {
             @close="handleCloseAssist"
             @toggle="handleToggleAssist"
         />
+
+        <LevelSelect
+            :show="showLevelSelect"
+            :levels-data="levels.levelsData.value"
+            :completed-level="levels.completedLevel.value"
+            :completed-count="levels.completedCount.value"
+            :unlocked-max="levels.unlockedMax.value"
+            :records="levels.records.value"
+            @close="handleCloseLevelSelect"
+            @select-level="handleSelectLevel"
+        />
     </div>
 </template>
 
@@ -262,13 +375,54 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
 }
 
 .title {
     font-size: 2rem;
     font-weight: 700;
     letter-spacing: 0.15em;
+}
+
+.mode-switch {
+    display: flex;
+    gap: 0;
+}
+
+.mode-switch .btn {
+    border-radius: 0;
+}
+
+.mode-switch .btn:first-child {
+    border-radius: 4px 0 0 4px;
+}
+
+.mode-switch .btn:last-child {
+    border-radius: 0 4px 4px 0;
+}
+
+.mode-switch .btn.active {
+    background: #000;
+    color: #fff;
+}
+
+.level-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.level-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.level-number {
+    font-size: 1rem;
+    font-weight: 700;
+    min-width: 80px;
+    text-align: center;
 }
 
 .top-bar {
