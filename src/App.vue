@@ -183,6 +183,7 @@ onMounted(() => {
 onUnmounted(() => {
     window.removeEventListener("keydown", handleKeyDown);
     window.removeEventListener("keyup", handleKeyUp);
+    game.cleanup();
 });
 </script>
 

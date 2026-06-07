@@ -63,6 +63,13 @@ export function useGame(timer, favorites) {
   // 键盘拖拽状态
   const keyDragValue = ref(null)
 
+  // 自定义方向键长按重复
+  const keyRepeatTimer = ref(null)
+  const keyRepeatDelayTimer = ref(null)
+  const activeDirection = ref(null)
+  const REPEAT_DELAY = 300
+  const REPEAT_INTERVAL = 80
+
   const currentSolution = ref(null)
   const currentRowHints = ref(null)
   const currentColHints = ref(null)
@@ -766,8 +773,9 @@ export function useGame(timer, favorites) {
   /**
    * 移动键盘选中格子
    * @param {string} direction - up/down/left/right
+   * @param {boolean} wrap - 是否循环环绕（默认 true）
    */
-  function moveSelectedCell(direction) {
+  function moveSelectedCell(direction, wrap = true) {
     if (isComplete.value) return
     if (!selectedCell.value) {
       const start = lastInteractedCell.value || { r: 0, c: 0 }
@@ -777,10 +785,18 @@ export function useGame(timer, favorites) {
     const size = currentSize.value
     let { r, c } = selectedCell.value
     switch (direction) {
-      case 'up': r = (r - 1 + size) % size; break
-      case 'down': r = (r + 1) % size; break
-      case 'left': c = (c - 1 + size) % size; break
-      case 'right': c = (c + 1) % size; break
+      case 'up':
+        if (r > 0 || wrap) r = wrap ? (r - 1 + size) % size : Math.max(0, r - 1)
+        break
+      case 'down':
+        if (r < size - 1 || wrap) r = wrap ? (r + 1) % size : Math.min(size - 1, r + 1)
+        break
+      case 'left':
+        if (c > 0 || wrap) c = wrap ? (c - 1 + size) % size : Math.max(0, c - 1)
+        break
+      case 'right':
+        if (c < size - 1 || wrap) c = wrap ? (c + 1) % size : Math.min(size - 1, c + 1)
+        break
     }
     selectedCell.value = { r, c }
 
@@ -788,6 +804,39 @@ export function useGame(timer, favorites) {
     if (keyDragValue.value !== null) {
       applyKeyDragToCell(r, c)
     }
+  }
+
+  /**
+   * 启动方向键重复移动
+   * @param {string} direction
+   */
+  function startKeyRepeat(direction) {
+    stopKeyRepeat()
+    activeDirection.value = direction
+    // 第一次移动（循环）
+    moveSelectedCell(direction, true)
+    // 延迟后开始重复（不循环）
+    keyRepeatDelayTimer.value = setTimeout(() => {
+      moveSelectedCell(direction, false)
+      keyRepeatTimer.value = setInterval(() => {
+        moveSelectedCell(direction, false)
+      }, REPEAT_INTERVAL)
+    }, REPEAT_DELAY)
+  }
+
+  /**
+   * 停止方向键重复移动
+   */
+  function stopKeyRepeat() {
+    if (keyRepeatDelayTimer.value) {
+      clearTimeout(keyRepeatDelayTimer.value)
+      keyRepeatDelayTimer.value = null
+    }
+    if (keyRepeatTimer.value) {
+      clearInterval(keyRepeatTimer.value)
+      keyRepeatTimer.value = null
+    }
+    activeDirection.value = null
   }
 
   /**
@@ -868,28 +917,36 @@ export function useGame(timer, favorites) {
       case 'w':
       case 'W':
         e.preventDefault()
-        moveSelectedCell('up')
+        if (activeDirection.value !== 'up') {
+          startKeyRepeat('up')
+        }
         break
 
       case 'ArrowDown':
       case 's':
       case 'S':
         e.preventDefault()
-        moveSelectedCell('down')
+        if (activeDirection.value !== 'down') {
+          startKeyRepeat('down')
+        }
         break
 
       case 'ArrowLeft':
       case 'a':
       case 'A':
         e.preventDefault()
-        moveSelectedCell('left')
+        if (activeDirection.value !== 'left') {
+          startKeyRepeat('left')
+        }
         break
 
       case 'ArrowRight':
       case 'd':
       case 'D':
         e.preventDefault()
-        moveSelectedCell('right')
+        if (activeDirection.value !== 'right') {
+          startKeyRepeat('right')
+        }
         break
 
       case ' ':
@@ -953,11 +1010,24 @@ export function useGame(timer, favorites) {
     if (e.key === 'f' || e.key === 'F' || e.key === 'x' || e.key === 'X' || e.key === ' ') {
       keyDragValue.value = null
     }
+    // 停止方向键重复
+    const dirMap = {
+      ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
+      w: 'up', W: 'up', s: 'down', S: 'down',
+      a: 'left', A: 'left', d: 'right', D: 'right',
+    }
+    if (dirMap[e.key] === activeDirection.value) {
+      stopKeyRepeat()
+    }
   }
 
   // 初始化
   grid.value = createEmptyGrid(currentSize.value)
   loadAssistSettings()
+
+  function cleanup() {
+    stopKeyRepeat()
+  }
 
   return {
     // 状态
@@ -1019,5 +1089,6 @@ export function useGame(timer, favorites) {
     restoreFromData,
     handleKeyDown,
     onKeyUp,
+    cleanup,
   }
 }
